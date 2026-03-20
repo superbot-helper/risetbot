@@ -1,7 +1,9 @@
 import { Router, type IRouter } from 'express';
 import { queryRows, queryOne, query } from '../lib/db.js';
 import { GenerateReportBody } from '../lib/validators.js';
-import { analystAgent, reporterAgent, type SchemaColumn } from '../lib/agents.js';
+import { type SchemaColumn } from '../lib/agents.js';
+import { analyzeWithPandas } from '../agents/analyst.js';
+import { generateReport } from '../agents/reporter.js';
 import { logActivity } from '../lib/activity.js';
 import { logger } from '../lib/logger.js';
 
@@ -73,19 +75,29 @@ async function generateReportAsync(
     const project = await queryOne('SELECT name FROM projects WHERE id = $1', [projectId]);
     const projectName = project?.name ?? 'Survey Project';
 
-    const analysisData = await analystAgent(allData, schema, {
+    const analysisData = await analyzeWithPandas(allData, schema, {
       includeStatistics: options.includeStatistics,
       includeSentiment: options.includeSentiment,
       includeThemes: options.includeThemes,
-      customPrompt: options.customPrompt,
     });
 
-    const reportContent = await reporterAgent(analysisData, projectName, options.name);
-    const contentWithReport = { ...analysisData, reportContent };
+    // Try to find a template for DOCX generation
+    const templates = await queryRows(
+      'SELECT file_path FROM templates WHERE project_id = $1 LIMIT 1',
+      [projectId]
+    );
+    const templatePath = templates.length > 0 ? templates[0].file_path as string : undefined;
+
+    const reportResult = await generateReport(
+      templatePath,
+      analysisData as Record<string, unknown>,
+      projectName,
+      options.name,
+    );
 
     await query(
       `UPDATE reports SET analysis_data = $1, updated_at = NOW() WHERE id = $2`,
-      [JSON.stringify(contentWithReport), reportId]
+      [JSON.stringify(reportResult), reportId]
     );
 
     await logActivity(projectId, 'report', `Laporan "${options.name}" selesai dibuat`);

@@ -1,7 +1,7 @@
 import { Router, type IRouter } from 'express';
 import { queryRows, queryOne, query } from '../lib/db.js';
 import { SendChatMessageBody } from '../lib/validators.js';
-import { chatbotAgent, type SchemaColumn } from '../lib/agents.js';
+import { queryChatbot } from '../agents/chatbot.js';
 import { logActivity } from '../lib/activity.js';
 import { logger } from '../lib/logger.js';
 
@@ -40,23 +40,7 @@ router.post('/', async (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
-  try {
-    const processedFiles = await queryRows(
-      "SELECT * FROM knowledge WHERE project_id = $1 AND status = 'done'",
-      [projectId]
-    );
-
-    const surveyData: Record<string, unknown>[] = [];
-    for (const file of processedFiles) {
-      if (file.extracted_data?.rows) {
-        surveyData.push(...file.extracted_data.rows.map((r: any) => ({ ...r, _source: file.file_name })));
-      }
-    }
-
-    const schemas = await queryRows('SELECT columns FROM schemas WHERE project_id = $1', [projectId]);
-    const schema: SchemaColumn[] = schemas.length > 0 ? (schemas[0].columns as SchemaColumn[]) ?? [] : [];
-
-    const history = await queryRows(
+  try {    const history = await queryRows(
       'SELECT role, message FROM chat_history WHERE project_id = $1 ORDER BY created_at',
       [projectId]
     );
@@ -67,7 +51,7 @@ router.post('/', async (req, res) => {
 
     res.write(`data: ${JSON.stringify({ type: 'thinking', content: 'Sedang menganalisis data...' })}\n\n`);
 
-    const { answer, sources } = await chatbotAgent(body.message, surveyData, schema, chatHistoryFormatted);
+    const { answer, sources } = await queryChatbot(body.message, projectId, chatHistoryFormatted);
 
     // Stream the answer character by character
     for (const chunk of answer.split('')) {

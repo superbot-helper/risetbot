@@ -27,14 +27,15 @@ RisetBot has been migrated to a standalone **3-service architecture**:
 - **Server**: Express.js
 - **Database**: PostgreSQL (connected via raw `pg` queries)
 - **Validation**: Zod
-- **AI Integrations**: `openai` SDK directly configured via `.env`
+- **AI Integrations**: `openai` SDK, PraisonAI for multi-agent orchestration
 - **Logging**: Pino & pino-http
 
-**3. Python Service (AI/Data Processing)* - Phase 3 Setup**
+**3. Python Service (AI/Data Processing)**
 - **Framework**: FastAPI
 - **OCR**: PaddleOCR, PyMuPDF
 - **Data Analysis**: Pandas, NumPy
 - **Reporting**: python-docx-template, Jinja2
+- **RAG**: Reasoning-based document retrieval via LLM context-window
 
 ## Folder & File Project Structure
 
@@ -44,11 +45,20 @@ risetbot/
 │   ├── db/
 │   │   └── schema.sql        # PostgreSQL raw tables definition
 │   ├── src/
+│   │   ├── agents/           # Refactored multi-agent modules
+│   │   │   ├── supervisor.ts # Task routing & PraisonAI orchestration
+│   │   │   ├── extractor.ts  # PDF OCR → LLM extraction pipeline
+│   │   │   ├── compiler.ts   # Data cleaning & CSV/XLSX export
+│   │   │   ├── analyst.ts    # Pandas-based analysis via Python svc
+│   │   │   ├── reporter.ts   # DOCX report generation via Python svc
+│   │   │   └── chatbot.ts    # RAG-powered Q&A via Python svc
 │   │   ├── lib/              # Core business logic & db pooling
 │   │   │   ├── activity.ts   # Activity logging
-│   │   │   ├── agents.ts     # OpenAI agent implementations
+│   │   │   ├── agents.ts     # Base OpenAI agent implementations
 │   │   │   ├── db.ts         # pg connection pool setup
 │   │   │   ├── logger.ts     # Pino logger definition
+│   │   │   ├── pythonService.ts # HTTP client for Python service
+│   │   │   ├── retry.ts      # Exponential backoff retry utility
 │   │   │   └── validators.ts # Zod API validations
 │   │   ├── routes/           # Express Route Handlers
 │   │   ├── app.ts            # Express App setup
@@ -68,11 +78,20 @@ risetbot/
 │
 ├── python-service/           # FastAPI Data Service
 │   ├── analysis/             # Pandas data analysis module
+│   │   ├── data_analyzer.py  # Orchestration layer
+│   │   ├── statistics.py     # Descriptive stats computation
+│   │   └── sentiment.py      # Keyword + LLM sentiment analysis
 │   ├── ocr/                  # PaddleOCR extraction module
-│   ├── rag/                  # PageIndex RAG connection
+│   │   ├── paddle_ocr_service.py # PaddleOCR wrapper
+│   │   └── pdf_parser.py     # PyMuPDF + OCR fallback
+│   ├── rag/                  # Reasoning-based RAG
+│   │   └── pageindex_service.py # Vectorless context-window RAG
 │   ├── report/               # DOCX template generation
+│   │   └── docx_generator.py # Jinja2 template rendering
 │   ├── utils/                # Helper functions
-│   ├── main.py               # FastAPI entry point
+│   │   ├── data_compiler.py  # CSV/XLSX export via Pandas
+│   │   └── file_handler.py   # File upload/validation/cleanup
+│   ├── main.py               # FastAPI entry point with all routes
 │   └── requirements.txt      # Python dependencies
 │
 ├── docs/                     # Documentation & Tasks

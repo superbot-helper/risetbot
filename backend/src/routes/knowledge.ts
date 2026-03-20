@@ -1,7 +1,9 @@
 import { Router, type IRouter } from 'express';
 import { queryRows, queryOne, query } from '../lib/db.js';
 import { UploadKnowledgeBody, ConfirmExtractionBody } from '../lib/validators.js';
-import { extractorAgent, compilerAgent, type SchemaColumn } from '../lib/agents.js';
+import { extractFromPDF } from '../agents/extractor.js';
+import { compileData } from '../agents/compiler.js';
+import { type SchemaColumn } from '../lib/agents.js';
 import { logActivity } from '../lib/activity.js';
 import { logger } from '../lib/logger.js';
 
@@ -74,29 +76,20 @@ async function processFileAsync(
       ];
     }
 
-    // Decode PDF content
-    let pdfText = '';
-    try {
-      const buffer = Buffer.from(fileContent, 'base64');
-      pdfText = buffer.toString('utf-8');
-      if (pdfText.includes('%PDF')) {
-        // TODO: Replace with actual Python OCR service call
-        pdfText = `PDF Document: ${fileId}\n\nSurvey responses extracted from PDF.\n` +
-          'Responden: Ahmad Fauzi\nTanggal: 2026-03-20\nSkor: 4\n' +
-          'Komentar: Pelayanan sudah cukup baik namun masih perlu peningkatan pada aspek kecepatan.';
-      }
-    } catch {
-      pdfText = `Survey PDF content: ${fileId}`;
-    }
-
-    const extraction = await extractorAgent(pdfText, schema);
+    // Extract data via Extractor Agent (Python OCR → LLM extraction)
+    const fileName = (await queryOne('SELECT file_name FROM knowledge WHERE id = $1', [fileId]))?.file_name || 'document.pdf';
+    const extraction = await extractFromPDF(fileContent, fileName, schema);
 
     await query(
       "UPDATE knowledge SET status = 'compiling', updated_at = NOW() WHERE id = $1",
       [fileId]
     );
 
-    const compiledData = await compilerAgent(extraction, schema);
+    // Compile data via Compiler Agent (LLM cleaning → standardization)
+    const compiledData = await compileData(
+      { rows: extraction.rows, rawText: extraction.rawText, pageCount: extraction.pageCount, confidence: extraction.confidence },
+      schema,
+    );
     extraction.rows = compiledData;
 
     await query(

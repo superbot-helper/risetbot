@@ -4,6 +4,7 @@ fastapi==0.115.6
 uvicorn[standard]==0.34.0
 python-dotenv==1.0.1
 pydantic==2.10.4
+python-multipart==0.0.20
 
 # OCR & PDF
 paddleocr==2.9.1
@@ -18,9 +19,6 @@ numpy==2.2.1
 # Report Generation
 python-docx-template==0.18.0
 jinja2==3.1.5
-
-# RAG (PageIndex)
-# pageindex==x.x.x  # Install when available
 
 # HTTP Client
 httpx==0.28.1
