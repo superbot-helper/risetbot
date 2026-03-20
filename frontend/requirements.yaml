@@ -1,0 +1,12 @@
+packages:
+  "framer-motion": "Smooth page transitions and micro-interactions for premium feel"
+  "recharts": "Beautiful data visualization for the global dashboard"
+  "date-fns": "Human-readable date formatting"
+  "react-dropzone": "Premium drag-and-drop file upload experience"
+  "clsx": "Class merging utilities"
+  "tailwind-merge": "Class merging utilities"
+
+images:
+  - path: "artifacts/risetbot/public/images/auth-bg.png"
+    description: "Subtle abstract gradient in very light blue and silver, frosted glass aesthetic, ultra-minimalist, apple style, soft lighting"
+    aspect_ratio: "16:9"
