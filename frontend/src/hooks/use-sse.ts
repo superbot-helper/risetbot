@@ -7,7 +7,7 @@ export function useChatStream(projectId: string) {
   const queryClient = useQueryClient();
 
   const sendMessage = useCallback(
-    async (messageText: string) => {
+    async (messageText: string, selectedSources?: string[]) => {
       setIsStreaming(true);
       
       // Optimistically add user message
@@ -15,13 +15,18 @@ export function useChatStream(projectId: string) {
       
       // Add empty assistant message to be filled
       const assistantMessageId = (Date.now() + 1).toString();
-      setMessages(prev => [...prev, { role: "assistant", message: "", id: assistantMessageId }]);
+      setMessages(prev => [...prev, { role: "assistant", message: "", id: assistantMessageId, sources: [] }]);
 
       try {
+        const body: Record<string, any> = { message: messageText };
+        if (selectedSources && selectedSources.length > 0) {
+          body.sourceIds = selectedSources;
+        }
+
         const response = await fetch(`/api/projects/${projectId}/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: messageText }),
+          body: JSON.stringify(body),
         });
 
         if (!response.ok) throw new Error("Failed to send message");
@@ -52,6 +57,16 @@ export function useChatStream(projectId: string) {
                     prev.map(m => 
                       m.id === assistantMessageId 
                         ? { ...m, message: m.message + data.content } 
+                        : m
+                    )
+                  );
+                }
+                // Capture citation sources from stream
+                if (data.sources) {
+                  setMessages(prev =>
+                    prev.map(m =>
+                      m.id === assistantMessageId
+                        ? { ...m, sources: data.sources }
                         : m
                     )
                   );

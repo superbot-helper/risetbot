@@ -76,6 +76,11 @@ class RAGQueryRequest(BaseModel):
   chat_history: Optional[list[dict]] = None
 
 
+class RAGBuildIndexRequest(BaseModel):
+  """Request body for building PageIndex tree from a PDF."""
+  pdf_path: str
+
+
 class CompileRequest(BaseModel):
   """Request body for data compilation."""
   data: list[dict]
@@ -245,11 +250,36 @@ async def get_template_vars(file: UploadFile = File(...)):
     raise HTTPException(status_code=500, detail=str(e))
 
 
-# ─── RAG Routes ─────────────────────────────────────────────
+# ─── RAG Routes (PageIndex Self-hosted) ─────────────────────
+
+@app.post('/rag/build-index')
+async def rag_build_index(request: RAGBuildIndexRequest):
+  """Build a PageIndex tree structure from a PDF document."""
+  if not os.path.isfile(request.pdf_path):
+    raise HTTPException(status_code=404, detail=f'PDF not found: {request.pdf_path}')
+
+  try:
+    from rag.pageindex_service import PageIndexRAGService
+    service = PageIndexRAGService()
+    result = await service.build_tree_index(request.pdf_path)
+    return {'status': 'success', **result}
+  except Exception as e:
+    logger.error('PageIndex tree build failed: %s', str(e))
+    raise HTTPException(status_code=500, detail=f'Tree index build failed: {str(e)}')
+
+
+@app.get('/rag/indexes')
+async def rag_list_indexes():
+  """List all indexed documents with their tree file paths."""
+  from rag.pageindex_service import PageIndexRAGService
+  service = PageIndexRAGService()
+  docs = service.list_indexed_documents()
+  return {'status': 'success', 'documents': docs}
+
 
 @app.post('/rag/query')
 async def rag_query(request: RAGQueryRequest):
-  """Query knowledge base using reasoning-based RAG."""
+  """Query knowledge base using PageIndex reasoning-based tree search RAG."""
   try:
     from rag.pageindex_service import PageIndexRAGService
     service = PageIndexRAGService()

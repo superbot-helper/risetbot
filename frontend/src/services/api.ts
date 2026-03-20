@@ -1,13 +1,13 @@
 /**
- * API service layer — replaces @workspace/api-client-react hooks.
- * All hooks use @tanstack/react-query for caching/mutations.
+ * API service layer — typed hooks using @tanstack/react-query.
+ * All mutations use FormData for file uploads where applicable.
  */
 import { useQuery, useMutation } from '@tanstack/react-query';
 
 const API_BASE = '/api';
 
 /**
- * Generic fetch wrapper with error handling.
+ * Generic JSON fetch wrapper with error handling.
  */
 async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${url}`, {
@@ -20,6 +20,22 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   }
   return res.json();
 }
+
+/**
+ * Multipart upload wrapper (no Content-Type — browser sets boundary).
+ */
+async function apiUpload<T>(url: string, formData: FormData): Promise<T> {
+  const res = await fetch(`${API_BASE}${url}`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(error.message || 'Upload failed');
+  }
+  return res.json();
+}
+
 
 // ─── Dashboard ──────────────────────────────────────────────
 export function useGetDashboardStats() {
@@ -35,6 +51,14 @@ export function useGetRecentActivity() {
     queryFn: () => apiFetch<any[]>('/dashboard/activity'),
   });
 }
+
+export function useGetProjectStatusTable() {
+  return useQuery({
+    queryKey: ['/api/dashboard/project-status'],
+    queryFn: () => apiFetch<any[]>('/dashboard/project-status'),
+  });
+}
+
 
 // ─── Projects ───────────────────────────────────────────────
 export function useListProjects() {
@@ -69,7 +93,8 @@ export function useDeleteProject() {
   });
 }
 
-// ─── Knowledge ──────────────────────────────────────────────
+
+// ─── Knowledge (actual FormData file upload) ────────────────
 export function useListKnowledge(projectId: string) {
   return useQuery({
     queryKey: [`/api/projects/${projectId}/knowledge`],
@@ -78,13 +103,26 @@ export function useListKnowledge(projectId: string) {
   });
 }
 
+/**
+ * Upload PDF files via multipart FormData (not base64).
+ * Accepts multiple files in a single request.
+ */
 export function useUploadKnowledge() {
   return useMutation({
-    mutationFn: ({ projectId, data }: { projectId: string; data: any }) =>
-      apiFetch<any>(`/projects/${projectId}/knowledge`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+    mutationFn: ({
+      projectId,
+      files,
+      schemaId,
+    }: {
+      projectId: string;
+      files: File[];
+      schemaId?: string;
+    }) => {
+      const formData = new FormData();
+      files.forEach((file) => formData.append('files', file));
+      if (schemaId) formData.append('schemaId', schemaId);
+      return apiUpload<any>(`/projects/${projectId}/knowledge`, formData);
+    },
   });
 }
 
@@ -97,13 +135,22 @@ export function useDeleteKnowledge() {
 
 export function useConfirmExtraction() {
   return useMutation({
-    mutationFn: ({ projectId, id, data }: { projectId: string; id: string; data: { action: string } }) =>
+    mutationFn: ({
+      projectId,
+      id,
+      data,
+    }: {
+      projectId: string;
+      id: string;
+      data: { action: string; editedData?: any };
+    }) =>
       apiFetch<any>(`/projects/${projectId}/knowledge/${id}/confirm`, {
         method: 'POST',
         body: JSON.stringify(data),
       }),
   });
 }
+
 
 // ─── Schemas ────────────────────────────────────────────────
 export function useListSchemas(projectId: string) {
@@ -119,6 +166,24 @@ export function useCreateSchema() {
     mutationFn: ({ projectId, data }: { projectId: string; data: any }) =>
       apiFetch<any>(`/projects/${projectId}/schemas`, {
         method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  });
+}
+
+export function useUpdateSchema() {
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      id,
+      data,
+    }: {
+      projectId: string;
+      id: string;
+      data: any;
+    }) =>
+      apiFetch<any>(`/projects/${projectId}/schemas/${id}`, {
+        method: 'PUT',
         body: JSON.stringify(data),
       }),
   });
@@ -140,6 +205,7 @@ export function useAutoGenerateSchema() {
       }),
   });
 }
+
 
 // ─── Reports ────────────────────────────────────────────────
 export function useListReports(projectId: string) {
@@ -167,6 +233,7 @@ export function useDeleteReport() {
   });
 }
 
+
 // ─── Chat ───────────────────────────────────────────────────
 export function useGetChatHistory(projectId: string) {
   return useQuery({
@@ -176,7 +243,8 @@ export function useGetChatHistory(projectId: string) {
   });
 }
 
-// ─── Templates ──────────────────────────────────────────────
+
+// ─── Templates (actual DOCX file upload) ────────────────────
 export function useListTemplates(projectId: string) {
   return useQuery({
     queryKey: [`/api/projects/${projectId}/templates`],
@@ -185,13 +253,37 @@ export function useListTemplates(projectId: string) {
   });
 }
 
+/**
+ * Upload DOCX template via multipart FormData.
+ */
 export function useUploadTemplate() {
   return useMutation({
-    mutationFn: ({ projectId, data }: { projectId: string; data: FormData }) =>
-      fetch(`${API_BASE}/projects/${projectId}/templates`, {
+    mutationFn: ({
+      projectId,
+      file,
+      name,
+      isDefault,
+    }: {
+      projectId: string;
+      file: File;
+      name: string;
+      isDefault?: boolean;
+    }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('name', name);
+      if (isDefault) formData.append('isDefault', 'true');
+      return apiUpload<any>(`/projects/${projectId}/templates`, formData);
+    },
+  });
+}
+
+export function useSetDefaultTemplate() {
+  return useMutation({
+    mutationFn: ({ projectId, id }: { projectId: string; id: string }) =>
+      apiFetch<any>(`/projects/${projectId}/templates/${id}/set-default`, {
         method: 'POST',
-        body: data,
-      }).then(r => r.json()),
+      }),
   });
 }
 

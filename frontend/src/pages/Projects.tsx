@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useListProjects, useCreateProject, useDeleteProject } from '@/services/api';
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { FolderKanban, Plus, MoreVertical, Trash2, Search, ArrowRight, FileText, BarChart2 } from "lucide-react";
@@ -86,78 +87,90 @@ function ProjectCard({ project }: { project: any }) {
   const { mutate: deleteProject, isPending: isDeleting } = useDeleteProject();
   const { toast } = useToast();
   const [showMenu, setShowMenu] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (confirm("Are you sure you want to delete this project? All data will be lost.")) {
-      deleteProject({ id: project.id }, {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
-          toast({ title: "Project deleted successfully" });
-        }
-      });
-    }
+  const handleDelete = () => {
+    deleteProject({ id: project.id }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+        toast({ title: "Project deleted successfully" });
+        setConfirmOpen(false);
+      }
+    });
   };
 
   return (
-    <Link href={`/projects/${project.id}/knowledge`} className="block group">
-      <div className="bg-white rounded-2xl p-6 border border-border shadow-sm hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:border-primary/20 transition-all duration-300 relative h-full flex flex-col">
-        <div className="flex justify-between items-start mb-4">
-          <div className="w-12 h-12 bg-blue-50 text-primary rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-            <FolderKanban className="w-6 h-6" />
+    <>
+      <Link href={`/projects/${project.id}/knowledge`} className="block group">
+        <div className="bg-card rounded-2xl p-6 border border-border shadow-sm hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:border-primary/20 transition-all duration-300 relative h-full flex flex-col">
+          <div className="flex justify-between items-start mb-4">
+            <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 text-primary rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+              <FolderKanban className="w-6 h-6" />
+            </div>
+            
+            <div className="relative">
+              <button 
+                onClick={(e) => { e.preventDefault(); setShowMenu(!showMenu); }}
+                className="p-1.5 text-muted-foreground hover:bg-secondary rounded-lg transition-colors"
+              >
+                <MoreVertical className="w-5 h-5" />
+              </button>
+              {showMenu && (
+                <div className="absolute right-0 top-full mt-1 w-36 bg-card border border-border rounded-xl shadow-lg z-20 overflow-hidden py-1">
+                  <button 
+                    onClick={(e) => { e.preventDefault(); setShowMenu(false); setConfirmOpen(true); }}
+                    disabled={isDeleting}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" /> Delete
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-          
-          <div className="relative">
-            <button 
-              onClick={(e) => { e.preventDefault(); setShowMenu(!showMenu); }}
-              className="p-1.5 text-muted-foreground hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <MoreVertical className="w-5 h-5" />
-            </button>
-            {showMenu && (
-              <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-border rounded-xl shadow-lg z-20 overflow-hidden py-1">
-                <button 
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                >
-                  <Trash2 className="w-4 h-4" /> Delete
-                </button>
+
+          <h3 className="text-lg font-bold text-foreground leading-tight mb-2 group-hover:text-primary transition-colors">
+            {project.name}
+          </h3>
+          <p className="text-sm text-muted-foreground line-clamp-2 mb-6 flex-1">
+            {project.description || "No description provided."}
+          </p>
+
+          <div className="mt-auto">
+            <div className="flex items-center gap-4 text-sm font-medium text-foreground mb-4">
+              <div className="flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-muted-foreground" />
+                <span>{project.knowledgeCount || 0} Files</span>
               </div>
-            )}
-          </div>
-        </div>
-
-        <h3 className="text-lg font-bold text-foreground leading-tight mb-2 group-hover:text-primary transition-colors">
-          {project.name}
-        </h3>
-        <p className="text-sm text-muted-foreground line-clamp-2 mb-6 flex-1">
-          {project.description || "No description provided."}
-        </p>
-
-        <div className="mt-auto">
-          <div className="flex items-center gap-4 text-sm font-medium text-foreground mb-4">
-            <div className="flex items-center gap-1.5">
-              <FileText className="w-4 h-4 text-muted-foreground" />
-              <span>{project.knowledgeCount || 0} Files</span>
+              <div className="flex items-center gap-1.5">
+                <BarChart2 className="w-4 h-4 text-muted-foreground" />
+                <span>{project.reportCount || 0} Reports</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <BarChart2 className="w-4 h-4 text-muted-foreground" />
-              <span>{project.reportCount || 0} Reports</span>
-            </div>
-          </div>
-          
-          <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">
-              Updated {format(new Date(project.updatedAt), 'MMM d, yyyy')}
-            </span>
-            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-primary group-hover:text-white text-muted-foreground transition-colors">
-              <ArrowRight className="w-4 h-4" />
+            
+            <div className="pt-4 border-t border-border/50 flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                Updated {format(new Date(project.updatedAt), 'MMM d, yyyy')}
+              </span>
+              <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center group-hover:bg-primary group-hover:text-white text-muted-foreground transition-colors">
+                <ArrowRight className="w-4 h-4" />
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={handleDelete}
+        isPending={isDeleting}
+        title="Delete Project"
+        description={<>Delete <strong>{project.name}</strong>? All files, schemas, and reports in this project will be permanently removed.</>}
+        confirmText="Delete Project"
+        variant="destructive"
+      />
+    </>
   );
 }
 

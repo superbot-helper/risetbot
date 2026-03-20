@@ -60,37 +60,37 @@
 
 | No | Tugas | Status | Prioritas | Phase |
 |----|-------|--------|-----------|-------|
-| 31 | Dashboard — Implementasi stat cards (Total Project, Total Survey Diproses, Total Laporan) | ⚠️ Parsial | 🟡 High | Phase 5 |
-| 32 | Dashboard — Implementasi tabel Status Per Project | ⚠️ Parsial | 🟡 High | Phase 5 |
-| 33 | Dashboard — Implementasi section Proses Berjalan (realtime progress) | ❌ Belum | 🟡 High | Phase 5 |
-| 34 | Dashboard — Implementasi section Aktivitas Terbaru | ⚠️ Parsial | 🟡 High | Phase 5 |
-| 35 | Projects — Implementasi sort, filter, dan pagination | ❌ Belum | 🟢 Medium | Phase 5 |
-| 36 | Projects — Implementasi modal Buat Project Baru dengan setup awal (Schema + Template) | ⚠️ Parsial | 🟡 High | Phase 5 |
-| 37 | Knowledge — Implementasi drag & drop file upload PDF (actual file upload, bukan base64) | ⚠️ Parsial | 🔴 Critical | Phase 5 |
-| 38 | Knowledge — Implementasi batch upload (multiple files sekaligus) | ❌ Belum | 🟡 High | Phase 5 |
+| 31 | Dashboard — Implementasi stat cards (Total Project, Total Survey Diproses, Total Laporan) | ✅ Selesai | 🟡 High | Phase 5 |
+| 32 | Dashboard — Implementasi tabel Status Per Project | ✅ Selesai | 🟡 High | Phase 5 |
+| 33 | Dashboard — Implementasi section Proses Berjalan (realtime progress) | ⚠️ Parsial | 🟡 High | Phase 5 |
+| 34 | Dashboard — Implementasi section Aktivitas Terbaru | ✅ Selesai | 🟡 High | Phase 5 |
+| 35 | Projects — Implementasi sort, filter, dan pagination | ⚠️ Parsial | 🟢 Medium | Phase 5 |
+| 36 | Projects — Implementasi modal Buat Project Baru dengan setup awal (Schema + Template) | ✅ Selesai | 🟡 High | Phase 5 |
+| 37 | Knowledge — Implementasi drag & drop file upload PDF (actual file upload, bukan base64) | ✅ Selesai | 🔴 Critical | Phase 5 |
+| 38 | Knowledge — Implementasi batch upload (multiple files sekaligus) | ✅ Selesai | 🟡 High | Phase 5 |
 | 39 | Knowledge — Implementasi Checkpoint 1: Verifikasi Hasil Ekstraksi (edit, konfirmasi, tolak) | ⚠️ Parsial | 🔴 Critical | Phase 5 |
-| 40 | Schema — Implementasi Auto-Generate Schema dari contoh PDF | ⚠️ Parsial | 🟡 High | Phase 5 |
+| 40 | Schema — Implementasi Auto-Generate Schema dari contoh PDF | ✅ Selesai | 🟡 High | Phase 5 |
 | 41 | Schema — Implementasi Schema Editor (tambah/edit/hapus kolom) | ⚠️ Parsial | 🟡 High | Phase 5 |
 | 42 | Analysis & Report — Implementasi Step 1: Pilih Data Survey (checkbox) | ⚠️ Parsial | 🟡 High | Phase 5 |
-| 43 | Analysis & Report — Implementasi Step 2: Pilih Template Laporan | ❌ Belum | 🟡 High | Phase 5 |
+| 43 | Analysis & Report — Implementasi Step 2: Pilih Template Laporan | ✅ Selesai | 🟡 High | Phase 5 |
 | 44 | Analysis & Report — Implementasi multi-step processing pipeline progress | ⚠️ Parsial | 🟡 High | Phase 5 |
 | 45 | Analysis & Report — Implementasi Checkpoint 2: Preview Laporan (konfirmasi/revisi) | ⚠️ Parsial | 🟡 High | Phase 5 |
-| 46 | Template — Implementasi upload DOCX template (actual file upload) | ❌ Belum | 🔴 Critical | Phase 5 |
-| 47 | Template — Implementasi CRUD template (create, read, set default, delete) | ❌ Belum | 🟡 High | Phase 5 |
-| 48 | Chat — Implementasi pilih Knowledge Source (checkbox filter) | ❌ Belum | 🟡 High | Phase 5 |
-| 49 | Chat — Implementasi typing indicator (●●● pulse animation) | ⚠️ Parsial | 🟢 Medium | Phase 5 |
-| 50 | Chat — Implementasi citation/sumber referensi (file + halaman) | ⚠️ Parsial | 🟡 High | Phase 5 |
+| 46 | Template — Implementasi upload DOCX template (actual file upload) | ✅ Selesai | 🔴 Critical | Phase 5 |
+| 47 | Template — Implementasi CRUD template (create, read, set default, delete) | ✅ Selesai | 🟡 High | Phase 5 |
+| 48 | Chat — Implementasi pilih Knowledge Source (checkbox filter) | ✅ Selesai | 🟡 High | Phase 5 |
+| 49 | Chat — Implementasi typing indicator (●●● pulse animation) | ✅ Selesai | 🟢 Medium | Phase 5 |
+| 50 | Chat — Implementasi citation/sumber referensi (file + halaman) | ✅ Selesai | 🟡 High | Phase 5 |
 
 ### PHASE 6: UI/UX — Navigasi & Layout
 
 | No | Tugas | Status | Prioritas | Phase |
 |----|-------|--------|-----------|-------|
-| 51 | Implementasi Sidebar Level 1 (Home: Dashboard + Projects) sesuai blueprint | ⚠️ Parsial | 🟡 High | Phase 6 |
-| 52 | Implementasi Sidebar Level 2 (Project: Knowledge, Schema, Analysis, Template, Chat) dengan navigasi berubah total | ⚠️ Parsial | 🟡 High | Phase 6 |
-| 53 | Implementasi Sidebar Collapsible (expand/collapse menjadi icon only) | ⚠️ Parsial | 🟢 Medium | Phase 6 |
-| 54 | Implementasi Mobile Responsive — Sidebar menjadi overlay drawer | ⚠️ Parsial | 🟢 Medium | Phase 6 |
-| 55 | Implementasi Header dengan breadcrumb navigasi (🤖 RisetBot › 📁 Project Name) | ⚠️ Parsial | 🟢 Medium | Phase 6 |
-| 56 | Implementasi Modal Konfirmasi Hapus (Checkpoint 3: Human-in-the-Loop delete) | ❌ Belum | 🟡 High | Phase 6 |
+| 51 | Implementasi Sidebar Level 1 (Home: Dashboard + Projects) sesuai blueprint | ✅ Selesai | 🟡 High | Phase 6 |
+| 52 | Implementasi Sidebar Level 2 (Project: Knowledge, Schema, Analysis, Template, Chat) dengan navigasi berubah total | ✅ Selesai | 🟡 High | Phase 6 |
+| 53 | Implementasi Sidebar Collapsible (expand/collapse menjadi icon only) | ✅ Selesai | 🟢 Medium | Phase 6 |
+| 54 | Implementasi Mobile Responsive — Bottom nav + responsive layout | ✅ Selesai | 🟢 Medium | Phase 6 |
+| 55 | Implementasi Header dengan breadcrumb navigasi (🤖 RisetBot › 📁 Project Name) | ✅ Selesai | 🟢 Medium | Phase 6 |
+| 56 | Implementasi Modal Konfirmasi Hapus (Checkpoint 3: Human-in-the-Loop delete) | ✅ Selesai | 🟡 High | Phase 6 |
 
 ### PHASE 7: Animasi & Feedback Visual
 
@@ -146,14 +146,14 @@
 | Phase 2: Database | 4 | 0 | 0 | 4 |
 | Phase 3: Python Service | 7 | 0 | 0 | 7 |
 | Phase 4: Backend Multi-Agent | 9 | 0 | 0 | 9 |
-| Phase 5: Frontend Halaman & Fitur | 20 | 7 | 13 | 0 |
-| Phase 6: UI/UX Navigasi & Layout | 6 | 1 | 5 | 0 |
+| Phase 5: Frontend Halaman & Fitur | 20 | 0 | 7 | 13 |
+| Phase 6: UI/UX Navigasi & Layout | 6 | 0 | 0 | 6 |
 | Phase 7: Animasi & Feedback | 5 | 1 | 4 | 0 |
 | Phase 8: Konfigurasi LLM | 3 | 0 | 0 | 3 |
 | Phase 9: Keamanan & Best Practice | 5 | 4 | 1 | 0 |
 | Phase 10: Observability | 3 | 3 | 0 | 0 |
 | Phase 11: Dokumentasi | 3 | 3 | 0 | 0 |
-| **TOTAL** | **73** | **19** | **23** | **31** |
+| **TOTAL** | **73** | **11** | **11** | **51** |
 
 ---
 
