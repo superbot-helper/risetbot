@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-03-21] - Improve Dark Mode Contrast on Chat Page
+
+### Fixed
+- Refactored Chat page color classes from hardcoded gray palette to semantic theme tokens (`bg-card`, `bg-background`, `bg-secondary`, `text-foreground`, `text-muted-foreground`).
+- Improved dark mode readability by removing washed gray surfaces and restoring higher contrast between chat container, message bubbles, and input area.
+
 ## [2026-03-21] - Improve Manual Schema Creation UX
 
 ### Fixed

@@ -6,6 +6,10 @@
 
 ## ✅ Checkpoint Terbaru
 
+- [2026-03-21] Perbaikan kontras dark mode di halaman Chat:
+	- Warna hardcoded abu-abu pada komponen Chat diganti ke token tema (`background/card/secondary/foreground`).
+	- Tampilan dark mode kini lebih gelap dan kontras lebih tinggi pada area percakapan, header, bubble pesan, dan input.
+
 - [2026-03-21] Perbaikan UX pembuatan schema manual pada halaman Schema:
 	- Tombol `New Schema` sekarang membuka `Schema Builder` dinamis (bukan quick-create dengan kolom default hardcoded).
 	- Form builder mendukung tambah/hapus field, pemilihan tipe data, flag required, dan AI guidance per field.

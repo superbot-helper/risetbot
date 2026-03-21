@@ -97,14 +97,14 @@ export default function Chat({ projectId }: { projectId: string }) {
 
   return (
     <ProjectLayout projectId={projectId}>
-      <div className="flex flex-col h-[calc(100vh-8rem)] bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+      <div className="flex flex-col h-[calc(100vh-8rem)] bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-border bg-secondary/40 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-tr from-primary to-blue-400 rounded-full flex items-center justify-center text-white shadow-sm">
               <Bot className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-semibold text-sm text-gray-900">
+              <h3 className="font-semibold text-sm text-foreground">
                 Survey Data Assistant
               </h3>
               <p className="text-xs text-green-600 font-medium flex items-center gap-1">
@@ -119,7 +119,7 @@ export default function Chat({ projectId }: { projectId: string }) {
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
               selectedSources.length > 0
                 ? "bg-primary/10 text-primary border-primary/20"
-                : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                : "bg-card text-muted-foreground border-border hover:border-border/80"
             }`}
           >
             <Filter className="w-3.5 h-3.5" />
@@ -144,11 +144,11 @@ export default function Chat({ projectId }: { projectId: string }) {
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="overflow-hidden border-b border-gray-100"
+              className="overflow-hidden border-b border-border"
             >
-              <div className="p-3 bg-gray-50/80 space-y-2">
+              <div className="p-3 bg-secondary/30 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-gray-500">
+                  <span className="text-xs font-medium text-muted-foreground">
                     Filter by Knowledge Source
                   </span>
                   <button
@@ -164,7 +164,7 @@ export default function Chat({ projectId }: { projectId: string }) {
 
                 <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
                   {processedFiles.length === 0 ? (
-                    <span className="text-xs text-gray-400 italic">
+                    <span className="text-xs text-muted-foreground italic">
                       No processed documents available
                     </span>
                   ) : (
@@ -175,7 +175,7 @@ export default function Chat({ projectId }: { projectId: string }) {
                         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all border ${
                           selectedSources.includes(file.id)
                             ? "bg-primary/10 text-primary border-primary/20"
-                            : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                            : "bg-card text-muted-foreground border-border hover:border-border/80"
                         }`}
                       >
                         <FileText className="w-3 h-3" />
@@ -191,7 +191,7 @@ export default function Chat({ projectId }: { projectId: string }) {
           )}
         </AnimatePresence>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/30">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-background">
           {allMessages.length === 0 && !isStreaming ? (
             <WelcomeScreen onSuggestion={setInput} />
           ) : (
@@ -210,14 +210,14 @@ export default function Chat({ projectId }: { projectId: string }) {
           <div ref={endRef} />
         </div>
 
-        <div className="p-4 bg-white border-t border-gray-100">
+        <div className="p-4 bg-card border-t border-border">
           <form onSubmit={handleSubmit} className="relative max-w-4xl mx-auto">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Message the assistant..."
-              className="w-full bg-gray-50 border border-gray-200 rounded-full pl-5 pr-14 py-3.5 outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-[15px]"
+              className="w-full bg-secondary/50 border border-border rounded-full pl-5 pr-14 py-3.5 outline-none focus:bg-card focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-[15px] text-foreground"
             />
             <button
               type="submit"
@@ -229,7 +229,7 @@ export default function Chat({ projectId }: { projectId: string }) {
           </form>
 
           <div className="text-center mt-3">
-            <span className="text-[10px] text-gray-400 font-medium">
+            <span className="text-[10px] text-muted-foreground font-medium">
               AI generated responses may be inaccurate. Verify important
               information.
             </span>
@@ -253,14 +253,14 @@ function WelcomeScreen({
   ];
 
   return (
-    <div className="h-full flex flex-col items-center justify-center text-gray-400">
+    <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
       <div className="w-16 h-16 bg-gradient-to-tr from-primary/20 to-blue-300/20 rounded-2xl flex items-center justify-center mb-4">
         <Bot className="w-8 h-8 text-primary/60" />
       </div>
-      <h3 className="text-lg font-semibold text-gray-700 mb-1">
+      <h3 className="text-lg font-semibold text-foreground mb-1">
         Ask your survey data
       </h3>
-      <p className="text-sm text-gray-400 mb-6">
+      <p className="text-sm text-muted-foreground mb-6">
         Ask anything about your processed survey documents.
       </p>
       <div className="flex flex-wrap justify-center gap-2 max-w-lg">
@@ -268,7 +268,7 @@ function WelcomeScreen({
           <button
             key={suggestion}
             onClick={() => onSuggestion(suggestion)}
-            className="px-4 py-2 bg-white border border-gray-200 rounded-full text-sm hover:border-primary hover:text-primary transition-all shadow-sm hover:shadow"
+            className="px-4 py-2 bg-card border border-border rounded-full text-sm hover:border-primary hover:text-primary transition-all shadow-sm hover:shadow"
           >
             {suggestion}
           </button>
@@ -293,7 +293,7 @@ function ChatMessage({
     <div className={`flex gap-4 ${isUser ? "flex-row-reverse" : ""}`}>
       <div
         className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${
-          isUser ? "bg-gray-800 text-white" : "bg-primary text-white"
+          isUser ? "bg-foreground text-background" : "bg-primary text-white"
         }`}
       >
         {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
@@ -307,8 +307,8 @@ function ChatMessage({
         <div
           className={`px-5 py-3.5 rounded-2xl text-[15px] leading-relaxed shadow-sm ${
             isUser
-              ? "bg-gray-800 text-white rounded-tr-sm"
-              : "bg-white border border-gray-100 text-gray-800 rounded-tl-sm"
+              ? "bg-foreground text-background rounded-tr-sm"
+              : "bg-card border border-border text-foreground rounded-tl-sm"
           }`}
         >
           {text || (isStreaming ? <TypingIndicator /> : "")}
@@ -319,7 +319,7 @@ function ChatMessage({
             {sources.map((source: any, index: number) => (
               <div
                 key={index}
-                className="inline-flex items-center gap-1 text-[11px] text-gray-500 bg-white border border-gray-200 px-2 py-0.5 rounded-md shadow-sm hover:border-primary/30 hover:text-primary transition-colors cursor-default"
+                className="inline-flex items-center gap-1 text-[11px] text-muted-foreground bg-card border border-border px-2 py-0.5 rounded-md shadow-sm hover:border-primary/30 hover:text-primary transition-colors cursor-default"
                 title={`${source.fileName || source.file_name}, Page ${source.page || "-"}`}
               >
                 <FileText className="w-3 h-3 text-primary" />
@@ -327,9 +327,9 @@ function ChatMessage({
                   {source.fileName || source.file_name}
                 </span>
                 {source.page && (
-                  <span className="text-gray-400 ml-0.5">p.{source.page}</span>
+                  <span className="text-muted-foreground ml-0.5">p.{source.page}</span>
                 )}
-                <ExternalLink className="w-2.5 h-2.5 text-gray-400 ml-0.5" />
+                <ExternalLink className="w-2.5 h-2.5 text-muted-foreground ml-0.5" />
               </div>
             ))}
           </div>
