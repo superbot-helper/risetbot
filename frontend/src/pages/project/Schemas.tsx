@@ -3,8 +3,11 @@ import { ProjectLayout } from "@/components/layout/ProjectLayout";
 import {
   useListSchemas,
   useCreateSchema,
+  useUpdateSchema,
   useDeleteSchema,
   useAutoGenerateSchema,
+  type SchemaColumn,
+  type SchemaItem,
 } from "@/services/api";
 import { Database, Plus, Wand2, Trash2, Edit, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,6 +22,7 @@ export default function Schemas({ projectId }: { projectId: string }) {
   const { data: schemas, isLoading } = useListSchemas(projectId);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAutoModalOpen, setIsAutoModalOpen] = useState(false);
+  const [editingSchema, setEditingSchema] = useState<SchemaItem | null>(null);
 
   return (
     <ProjectLayout projectId={projectId}>
@@ -74,7 +78,11 @@ export default function Schemas({ projectId }: { projectId: string }) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
               >
-                <SchemaCard schema={schema} projectId={projectId} />
+                <SchemaCard
+                  schema={schema}
+                  projectId={projectId}
+                  onEdit={setEditingSchema}
+                />
               </motion.div>
             ))}
           </div>
@@ -88,6 +96,13 @@ export default function Schemas({ projectId }: { projectId: string }) {
             onClose={() => setIsModalOpen(false)}
           />
         )}
+        {editingSchema && (
+          <CreateSchemaModal
+            projectId={projectId}
+            initialSchema={editingSchema}
+            onClose={() => setEditingSchema(null)}
+          />
+        )}
         {isAutoModalOpen && (
           <AutoGenerateModal
             projectId={projectId}
@@ -99,7 +114,15 @@ export default function Schemas({ projectId }: { projectId: string }) {
   );
 }
 
-function SchemaCard({ schema, projectId }: { schema: any; projectId: string }) {
+function SchemaCard({
+  schema,
+  projectId,
+  onEdit,
+}: {
+  schema: SchemaItem;
+  projectId: string;
+  onEdit: (schema: SchemaItem) => void;
+}) {
   const { mutate: del, isPending } = useDeleteSchema();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -173,7 +196,10 @@ function SchemaCard({ schema, projectId }: { schema: any; projectId: string }) {
           </span>
 
           <div className="flex gap-1">
-            <button className="p-1.5 text-muted-foreground hover:text-primary transition-colors">
+            <button
+              onClick={() => onEdit(schema)}
+              className="p-1.5 text-muted-foreground hover:text-primary transition-colors"
+            >
               <Edit className="w-4 h-4" />
             </button>
             <button
@@ -207,18 +233,82 @@ function SchemaCard({ schema, projectId }: { schema: any; projectId: string }) {
 
 function CreateSchemaModal({
   projectId,
+  initialSchema,
   onClose,
 }: {
   projectId: string;
+  initialSchema?: SchemaItem;
   onClose: () => void;
 }) {
-  const [name, setName] = useState("");
-  const { mutate: create, isPending } = useCreateSchema();
+  const isEditMode = Boolean(initialSchema?.id);
+  const [name, setName] = useState(initialSchema?.name ?? "");
+  const [description, setDescription] = useState(initialSchema?.description ?? "");
+  const [columns, setColumns] = useState<SchemaColumn[]>(
+    initialSchema?.columns?.length
+      ? initialSchema.columns.map((column) => ({
+          name: column.name ?? "",
+          type: column.type ?? "text",
+          aiGuidance: column.aiGuidance ?? "",
+          required: Boolean(column.required),
+        }))
+      : [
+          {
+            name: "",
+            type: "text",
+            aiGuidance: "",
+            required: false,
+          },
+        ],
+  );
+  const { mutate: create, isPending: isCreating } = useCreateSchema();
+  const { mutate: update, isPending: isUpdating } = useUpdateSchema();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const isPending = isCreating || isUpdating;
+
+  const updateColumn = <K extends keyof SchemaColumn>(
+    index: number,
+    key: K,
+    value: SchemaColumn[K],
+  ) => {
+    setColumns((prev) =>
+      prev.map((column, colIndex) =>
+        colIndex === index ? { ...column, [key]: value } : column,
+      ),
+    );
+  };
+
+  const addColumn = () => {
+    setColumns((prev) => [
+      ...prev,
+      {
+        name: "",
+        type: "text",
+        aiGuidance: "",
+        required: false,
+      },
+    ]);
+  };
+
+  const removeColumn = (index: number) => {
+    setColumns((prev) => {
+      if (prev.length <= 1) {
+        return prev;
+      }
+
+      return prev.filter((_, colIndex) => colIndex !== index);
+    });
+  };
 
   const handleCreate = () => {
     const sanitizedName = sanitizeUserText(name, 255);
+    const sanitizedDescription = sanitizeMultilineText(description, 2000);
+    const sanitizedColumns = columns.map((column) => ({
+      name: sanitizeUserText(column.name, 255),
+      type: column.type,
+      aiGuidance: sanitizeMultilineText(column.aiGuidance, 800),
+      required: Boolean(column.required),
+    }));
 
     if (!sanitizedName) {
       toast({
@@ -228,34 +318,69 @@ function CreateSchemaModal({
       return;
     }
 
+    if (sanitizedColumns.some((column) => !column.name)) {
+      toast({
+        title: "Field name is required",
+        description: "Setiap field schema wajib punya nama.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (sanitizedColumns.length === 0) {
+      toast({
+        title: "At least one field is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const payload = {
+      name: sanitizedName,
+      description: sanitizedDescription || undefined,
+      columns: sanitizedColumns,
+    };
+
+    const mutationOptions = {
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: [`/api/projects/${projectId}/schemas`],
+        });
+        toast({ title: isEditMode ? "Schema updated" : "Schema created" });
+        onClose();
+      },
+      onError: (error: unknown) => {
+        toast({
+          title: isEditMode ? "Update schema failed" : "Create schema failed",
+          description:
+            error instanceof Error
+              ? error.message
+              : isEditMode
+                ? "Gagal memperbarui schema"
+                : "Gagal membuat schema",
+          variant: "destructive",
+        });
+      },
+    };
+
+    if (isEditMode && initialSchema?.id) {
+      update(
+        {
+          projectId,
+          id: initialSchema.id,
+          data: payload,
+        },
+        mutationOptions,
+      );
+      return;
+    }
+
     create(
       {
         projectId,
-        data: {
-          name: sanitizedName,
-          columns: [
-            { name: "Responden", type: "text", aiGuidance: "Nama responden" },
-            { name: "Skor", type: "number", aiGuidance: "Skala 1-5" },
-          ],
-        },
+        data: payload,
       },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({
-            queryKey: [`/api/projects/${projectId}/schemas`],
-          });
-          toast({ title: "Schema created" });
-          onClose();
-        },
-        onError: (error) => {
-          toast({
-            title: "Create schema failed",
-            description:
-              error instanceof Error ? error.message : "Gagal membuat schema",
-            variant: "destructive",
-          });
-        },
-      },
+      mutationOptions,
     );
   };
 
@@ -265,10 +390,12 @@ function CreateSchemaModal({
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-card rounded-2xl w-full max-w-md p-6 shadow-2xl"
+        className="bg-card rounded-2xl w-full max-w-3xl p-6 shadow-2xl"
       >
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Quick Create Schema</h2>
+          <h2 className="text-xl font-bold">
+            {isEditMode ? "Edit Schema" : "Schema Builder"}
+          </h2>
           <button
             onClick={onClose}
             className="p-1 text-muted-foreground hover:text-foreground"
@@ -284,6 +411,89 @@ function CreateSchemaModal({
           className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-2 mb-4 outline-none focus:border-primary"
         />
 
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Deskripsi schema (opsional)"
+          className="w-full h-20 bg-secondary/30 border border-border rounded-xl px-4 py-2 mb-4 text-sm outline-none focus:border-primary resize-none"
+        />
+
+        <div className="space-y-3 max-h-[45vh] overflow-y-auto pr-1 mb-4">
+          {columns.map((column, index) => (
+            <div
+              key={index}
+              className="rounded-xl border border-border bg-secondary/20 p-3"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                <input
+                  value={column.name}
+                  onChange={(e) =>
+                    updateColumn(index, "name", e.target.value)
+                  }
+                  placeholder="Field Name"
+                  className="md:col-span-1 bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary"
+                />
+
+                <select
+                  value={column.type}
+                  onChange={(e) =>
+                    updateColumn(index, "type", e.target.value as SchemaColumn["type"])
+                  }
+                  className="md:col-span-1 bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary"
+                >
+                  <option value="text">Text</option>
+                  <option value="number">Number</option>
+                  <option value="date">Date</option>
+                  <option value="category">Category</option>
+                  <option value="boolean">Boolean</option>
+                </select>
+
+                <div className="md:col-span-1 flex items-center justify-between gap-3">
+                  <label className="inline-flex items-center gap-2 text-sm text-foreground/90">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(column.required)}
+                      onChange={(e) =>
+                        updateColumn(index, "required", e.target.checked)
+                      }
+                      className="h-4 w-4 rounded border-border"
+                    />
+                    Required
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => removeColumn(index)}
+                    disabled={columns.length <= 1}
+                    className="inline-flex items-center gap-1 text-xs text-red-500 disabled:text-muted-foreground disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Remove
+                  </button>
+                </div>
+              </div>
+
+              <textarea
+                value={column.aiGuidance}
+                onChange={(e) =>
+                  updateColumn(index, "aiGuidance", e.target.value)
+                }
+                placeholder="AI guidance (contoh: Ambil skor numerik 1-5 dari jawaban)"
+                className="w-full h-20 bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary resize-none"
+              />
+            </div>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={addColumn}
+          className="w-full mb-4 inline-flex justify-center items-center gap-2 py-2 border border-dashed border-border rounded-xl text-sm font-medium hover:bg-secondary/50 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Add Field
+        </button>
+
         <div className="flex gap-2">
           <button
             onClick={onClose}
@@ -296,7 +506,7 @@ function CreateSchemaModal({
             disabled={isPending}
             className="flex-1 py-2 bg-primary text-white rounded-xl font-medium disabled:opacity-50"
           >
-            {isPending ? "Saving..." : "Save"}
+            {isPending ? "Saving..." : isEditMode ? "Save Changes" : "Save"}
           </button>
         </div>
       </motion.div>

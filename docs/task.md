@@ -6,6 +6,12 @@
 
 ## ✅ Checkpoint Terbaru
 
+- [2026-03-21] Perbaikan UX pembuatan schema manual pada halaman Schema:
+	- Tombol `New Schema` sekarang membuka `Schema Builder` dinamis (bukan quick-create dengan kolom default hardcoded).
+	- Form builder mendukung tambah/hapus field, pemilihan tipe data, flag required, dan AI guidance per field.
+	- Ditambahkan validasi agar schema tidak bisa disimpan jika nama schema/field kosong.
+	- Fitur edit schema existing di kartu schema sudah diperbaiki: ikon pensil membuka builder dengan data terisi, lalu menyimpan via update schema API.
+
 - [2026-03-21] Menambahkan script operasional Windows untuk tiap service:
 	- `backend/start.bat`, `backend/stop.bat`, `backend/restart.bat`
 	- `frontend/start.bat`, `frontend/stop.bat`, `frontend/restart.bat`

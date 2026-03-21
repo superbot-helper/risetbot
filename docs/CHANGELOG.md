@@ -1,5 +1,28 @@
 # Changelog
 
+## [2026-03-21] - Improve Manual Schema Creation UX
+
+### Fixed
+- Updated manual schema flow on Schema page so `New Schema` now uses a real schema builder form instead of saving with hardcoded default fields.
+- Added dynamic field builder in modal: users can add/remove fields, set type (`text`, `number`, `date`, `category`, `boolean`), toggle required, and write per-field AI guidance.
+- Added frontend validation to prevent saving schema when schema name or field names are empty.
+- Fixed schema card edit action so existing schemas can be edited again using the same schema builder modal (pre-filled values + update API call).
+
+## [2026-03-21] - Fix Projects Date Rendering Crash
+
+### Fixed
+- Fixed frontend crash `Invalid time value` on Projects page by hardening date parsing in `frontend/src/pages/Projects.tsx`.
+- Added safe date resolver to support both camelCase (`updatedAt`) and snake_case (`updated_at`) API fields, with fallback to `createdAt`/`created_at`.
+- Added invalid-date guard before calling `date-fns/format`, so project cards no longer crash when date data is missing or malformed.
+
+## [2026-03-21] - Fix Python Service Startup on Windows
+
+### Fixed
+- Updated `python-service/start.bat` to run FastAPI using `python -m uvicorn` (with interpreter fallback: `.venv`, `py`, then `python`) so startup no longer depends on global `uvicorn` in PATH.
+- Fixed PID handling in `python-service/start.bat` by enabling delayed expansion and validating PID file format before querying running processes.
+- Improved process spawn strategy in `python-service/start.bat` using direct `Start-Process` on Python, ensuring PID capture is stable.
+- Updated `python-service/stop.bat` to validate PID file format before `tasklist` calls, preventing `ERROR: The search filter cannot be recognized.` when PID file is corrupt.
+
 ## [2026-03-21] - Windows Service Runner Scripts
 
 ### Added
