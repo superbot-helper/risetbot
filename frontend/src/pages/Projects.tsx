@@ -3,7 +3,7 @@ import { useListProjects, useCreateProject, useDeleteProject } from '@/services/
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Link } from "wouter";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { FolderKanban, Plus, MoreVertical, Trash2, Search, ArrowRight, FileText, BarChart2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -82,12 +82,28 @@ export default function Projects() {
   );
 }
 
+function getUpdatedDate(project: any): Date | null {
+  const rawDate =
+    project?.updatedAt ??
+    project?.updated_at ??
+    project?.createdAt ??
+    project?.created_at;
+
+  if (!rawDate) {
+    return null;
+  }
+
+  const parsed = new Date(rawDate);
+  return isValid(parsed) ? parsed : null;
+}
+
 function ProjectCard({ project }: { project: any }) {
   const queryClient = useQueryClient();
   const { mutate: deleteProject, isPending: isDeleting } = useDeleteProject();
   const { toast } = useToast();
   const [showMenu, setShowMenu] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const updatedDate = getUpdatedDate(project);
 
   const handleDelete = () => {
     deleteProject({ id: project.id }, {
@@ -150,7 +166,7 @@ function ProjectCard({ project }: { project: any }) {
             
             <div className="pt-4 border-t border-border/50 flex items-center justify-between">
               <span className="text-xs text-muted-foreground">
-                Updated {format(new Date(project.updatedAt), 'MMM d, yyyy')}
+                Updated {updatedDate ? format(updatedDate, 'MMM d, yyyy') : 'Unknown'}
               </span>
               <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center group-hover:bg-primary group-hover:text-white text-muted-foreground transition-colors">
                 <ArrowRight className="w-4 h-4" />

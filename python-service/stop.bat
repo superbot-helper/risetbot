@@ -17,6 +17,13 @@ if not defined TARGET_PID (
   exit /b 1
 )
 
+findstr /R "^[0-9][0-9]*$" "%PID_FILE%" >nul
+if not %errorlevel%==0 (
+  echo [%SERVICE_NAME%] PID file tidak valid: %TARGET_PID%
+  del "%PID_FILE%" >nul 2>&1
+  exit /b 1
+)
+
 tasklist /FI "PID eq %TARGET_PID%" | find "%TARGET_PID%" >nul
 if not %errorlevel%==0 (
   echo [%SERVICE_NAME%] proses dengan PID %TARGET_PID% tidak aktif.
