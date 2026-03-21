@@ -6,6 +6,13 @@
 
 ## ✅ Checkpoint Terbaru
 
+- [2026-03-21] Perbaikan akar masalah RAG chatbot (retrieval halaman + PageIndex):
+	- Root cause ditemukan pada payload retrieval yang hanya memakai `rawText` terpotong (`slice(0, 2000)`), menyebabkan informasi di halaman lanjutan tidak ikut terbaca.
+	- Menambahkan metadata OCR per halaman (`pages`) ke `extracted_data` agar fallback retrieval bisa tetap page-aware.
+	- Menambahkan build index PageIndex otomatis saat pipeline processing knowledge, dan menyimpan metadata index ke `extracted_data.rag`.
+	- Menambahkan lazy index build di alur chatbot untuk knowledge lama yang belum memiliki metadata index.
+	- Verifikasi backend typecheck berhasil tanpa error.
+
 - [2026-03-21] Konsolidasi runtime folder dan sinkronisasi dokumentasi:
 	- Menghapus duplikasi folder runtime di root (`logs`, `tree_indexes`) dan memusatkan artefak ke `python-service/logs` serta `python-service/tree_indexes`.
 	- Menambahkan guard pada eksekusi PageIndex agar working directory selalu `python-service`, sehingga artefak runtime tidak lagi muncul di root.

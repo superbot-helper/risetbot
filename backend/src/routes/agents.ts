@@ -8,6 +8,7 @@ import { logActivity } from "../lib/activity.js";
 import { logger } from "../lib/logger.js";
 import { extractFromPDF } from "../agents/extractor.js";
 import { compileData } from "../agents/compiler.js";
+import { buildRAGIndex } from "../lib/pythonService.js";
 import { startWorkflowTrace } from "../lib/observability.js";
 import { type SchemaColumn } from "../lib/agents.js";
 
@@ -243,6 +244,34 @@ router.post("/process/stream", async (req, res) => {
       },
     );
 
+    let ragIndex: { docId?: string; treePath?: string; status?: string } = {
+      status: "not_indexed",
+    };
+
+    try {
+      const indexResult = await buildRAGIndex(absolutePath);
+      ragIndex = {
+        docId: indexResult.doc_id,
+        treePath: indexResult.tree_path,
+        status: indexResult.status,
+      };
+    } catch (error) {
+      ragIndex = {
+        status: "index_failed",
+      };
+
+      logger.warn(
+        {
+          projectId,
+          knowledgeId,
+          fileName: file.file_name,
+          traceId: trace?.traceId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        "RAG index build failed during processing",
+      );
+    }
+
     await query(
       `
         UPDATE knowledge
@@ -259,6 +288,8 @@ router.post("/process/stream", async (req, res) => {
           rawText: extraction.rawText.slice(0, 2000),
           confidence: extraction.confidence,
           pageCount: extraction.pageCount,
+          pages: extraction.pages || [],
+          rag: ragIndex,
           schemaId: schemaId ?? null,
         }),
       ],

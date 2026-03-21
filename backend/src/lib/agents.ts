@@ -39,6 +39,11 @@ export interface ExtractionResult {
   rawText: string;
   pageCount: number;
   confidence: number;
+  pages?: Array<{
+    page_number: number;
+    text: string;
+    char_count: number;
+  }>;
 }
 
 export interface LLMCallContext extends TraceContext {

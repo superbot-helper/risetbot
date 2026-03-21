@@ -60,6 +60,11 @@ export async function extractFromPDF(
       let pdfText = "";
       let pageCount = 0;
       let ocrMethod = "fallback";
+      let ocrPages: Array<{
+        page_number: number;
+        text: string;
+        char_count: number;
+      }> = [];
 
       // Step 1: Try Python service OCR
       try {
@@ -67,6 +72,7 @@ export async function extractFromPDF(
         pdfText = ocrResult.text;
         pageCount = ocrResult.page_count;
         ocrMethod = ocrResult.method;
+        ocrPages = Array.isArray(ocrResult.pages) ? ocrResult.pages : [];
 
         logger.info(
           {
@@ -148,6 +154,7 @@ export async function extractFromPDF(
       return {
         ...extraction,
         pageCount: pageCount || extraction.pageCount,
+        pages: ocrPages,
       };
     },
   );

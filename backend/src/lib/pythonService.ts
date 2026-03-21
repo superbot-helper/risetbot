@@ -140,15 +140,36 @@ export interface RAGResult {
   confidence: number;
 }
 
+export interface RAGBuildIndexResult {
+  status: string;
+  doc_id: string;
+  tree_path: string;
+}
+
 export async function queryRAG(
   question: string,
-  documents: Array<{ file_name: string; text: string; pages?: unknown[] }>,
+  documents: Array<{
+    file_name: string;
+    text: string;
+    pages?: Array<{ page_number: number; text: string; char_count?: number }>;
+    doc_id?: string;
+  }>,
   chatHistory?: Array<{ role: string; content: string }>,
 ): Promise<RAGResult> {
   return pythonRequest<RAGResult>("/rag/query", {
     question,
     documents,
     chat_history: chatHistory,
+  });
+}
+
+export async function buildRAGIndex(
+  pdfPath: string,
+): Promise<RAGBuildIndexResult> {
+  return pythonRequest<RAGBuildIndexResult>("/rag/build-index", {
+    pdf_path: pdfPath,
+  }, {
+    timeout: 300_000,
   });
 }
 

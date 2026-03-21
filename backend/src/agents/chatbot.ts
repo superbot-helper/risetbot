@@ -6,7 +6,7 @@
  * - source filtering by selected knowledge IDs
  * - observability/latency tracking per agent run
  */
-import { queryRAG } from "../lib/pythonService.js";
+import { buildRAGIndex, queryRAG } from "../lib/pythonService.js";
 import {
   chatbotAgent as llmChatbotAgent,
   type SchemaColumn,
@@ -14,6 +14,7 @@ import {
 import { queryRows } from "../lib/db.js";
 import { trackAgentRun, type TraceContext } from "../lib/observability.js";
 import { logger } from "../lib/logger.js";
+import path from "path";
 
 export interface ChatbotQueryOptions extends TraceContext {
   sourceIds?: string[];
@@ -25,12 +26,41 @@ type ChatbotSource = {
   excerpt?: string;
 };
 
+type OCRPage = {
+  page_number: number;
+  text: string;
+  char_count: number;
+};
+
+type RAGDocument = {
+  file_name: string;
+  text: string;
+  pages: OCRPage[];
+  doc_id?: string;
+};
+
 function normalizeSourceIds(sourceIds?: string[]): string[] {
   if (!Array.isArray(sourceIds)) return [];
   return sourceIds
     .map((id) => String(id || "").trim())
     .filter(Boolean)
     .slice(0, 100);
+}
+
+function normalizePages(pages: unknown): OCRPage[] {
+  if (!Array.isArray(pages)) return [];
+  return pages
+    .map((page) => ({
+      page_number: Number((page as any)?.page_number || 0),
+      text: String((page as any)?.text || ""),
+      char_count: Number((page as any)?.char_count || 0),
+    }))
+    .filter((page) => page.page_number > 0 && page.text.trim().length > 0);
+}
+
+function inferDocId(filePath?: string): string {
+  if (!filePath || typeof filePath !== "string") return "";
+  return path.parse(filePath).name.trim();
 }
 
 /**
@@ -103,19 +133,61 @@ export async function queryChatbot(
         "ChatBot: Knowledge sources prepared",
       );
 
-      // Build document list for RAG
-      const documents = filteredFiles
-        .filter(
-          (file: any) =>
-            file.extracted_data?.rawText || file.extracted_data?.rows,
-        )
-        .map((file: any) => ({
+      // Build document list for RAG, including page-level OCR metadata when available.
+      const documents: RAGDocument[] = [];
+      for (const file of filteredFiles as any[]) {
+        const extracted =
+          file.extracted_data && typeof file.extracted_data === "object"
+            ? file.extracted_data
+            : {};
+
+        const pages = normalizePages((extracted as any).pages);
+        const storedRagDocId = String((extracted as any)?.rag?.docId || "").trim();
+        let docId = storedRagDocId;
+
+        if (!docId) {
+          docId = inferDocId(file.file_path);
+        }
+
+        if (
+          !storedRagDocId &&
+          pages.length === 0 &&
+          typeof file.file_path === "string" &&
+          file.file_path
+        ) {
+          try {
+            const indexResult = await buildRAGIndex(file.file_path);
+            docId = indexResult.doc_id;
+          } catch (error) {
+            logger.warn(
+              {
+                traceId: context.traceId,
+                fileName: file.file_name,
+                error: error instanceof Error ? error.message : String(error),
+              },
+              "ChatBot: Lazy RAG index build failed, continuing with context fallback",
+            );
+          }
+        }
+
+        const rawText =
+          typeof (extracted as any).rawText === "string"
+            ? (extracted as any).rawText
+            : "";
+        const rowsText = JSON.stringify((extracted as any).rows || []);
+        const text = rawText.trim().length > 0 ? rawText : rowsText;
+
+        if (!text.trim() && pages.length === 0) {
+          continue;
+        }
+
+        documents.push({
           file_name: file.file_name,
-          text:
-            file.extracted_data?.rawText ||
-            JSON.stringify(file.extracted_data?.rows || []),
-          pages: [],
-        }));
+          text,
+          pages,
+          doc_id: docId || undefined,
+        });
+      }
 
       // Try Python RAG service first
       try {

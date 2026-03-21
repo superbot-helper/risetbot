@@ -1,5 +1,21 @@
 # Changelog
 
+## [2026-03-21] - Perbaikan Akar Masalah RAG Chatbot (PageIndex + Page Retrieval)
+
+### Fixed
+- Fixed root cause jawaban RAG tidak menemukan informasi di halaman tengah/akhir dokumen karena payload retrieval hanya mengandalkan `rawText` yang tersimpan terpotong 2000 karakter.
+- Fixed fallback retrieval agar bisa menggunakan metadata halaman OCR (`pages`) sehingga source citation tidak selalu jatuh ke halaman awal dokumen.
+
+### Changed
+- Backend extractor sekarang menyertakan hasil OCR per halaman (`page_number`, `text`, `char_count`) pada hasil ekstraksi.
+- Pipeline processing knowledge sekarang membangun tree index PageIndex via endpoint `/rag/build-index` dan menyimpan metadata index (`docId`, `treePath`, `status`) ke `extracted_data.rag`.
+- Chatbot agent sekarang mengirim `doc_id` dan `pages` ke endpoint `/rag/query`, serta melakukan lazy index build untuk data lama yang belum memiliki metadata index.
+- Python service client backend ditambah helper `buildRAGIndex(...)` dengan timeout lebih longgar untuk proses indexing dokumen besar.
+
+### Verified
+- Typecheck backend lulus: `npm run typecheck`.
+- Tidak ada error diagnostics pada file backend yang diubah.
+
 ## [2026-03-21] - Runtime Folder Consolidation and Docs Sync
 
 ### Fixed
