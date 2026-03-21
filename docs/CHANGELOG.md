@@ -1,5 +1,66 @@
 # Changelog
 
+## [2026-03-21] - Runtime Folder Consolidation and Docs Sync
+
+### Fixed
+- Removed duplicate runtime artifact folders at repository root (`logs`, `tree_indexes`) and consolidated runtime artifacts into `python-service/logs` and `python-service/tree_indexes`.
+- Pinned PageIndex execution cwd to `python-service` so runtime logs are no longer created in repository root when called from different working directories.
+
+### Changed
+- Updated `README.md` repository structure and storage notes to reflect single runtime location under `python-service`.
+- Updated `docs/specs.md` structure and storage policy to include `python-service/logs` and explicit root runtime-folder prohibition.
+- Clarified Python command usage to `py -3.11` for dependency install and service startup.
+- Added root-level `/tree_indexes` safeguard to `.gitignore`.
+
+## [2026-03-21] - PageIndex Self-Hosted Tree Search Hardening
+
+### Fixed
+- Fixed FastAPI + PageIndex integration error `asyncio.run() cannot be called from a running event loop` by running `page_index_main(...)` in a worker thread.
+- Fixed RAG query crash when loading PageIndex output format (`{'doc_name', 'structure'}`) by normalizing tree payloads before traversal.
+- Fixed unstable index path resolution by making `TREE_INDEX_DIR` deterministic under `python-service/tree_indexes` regardless current working directory.
+
+### Changed
+- Hardened self-hosted PageIndex detection in `python-service/rag/pageindex_service.py` so service validates OSS API compatibility (`page_index_main` + `ConfigLoader`) instead of only checking module import.
+- Added local repository bootstrap support for PageIndex via `python-service/.vendor/PageIndex` and optional `PAGEINDEX_REPO_PATH`.
+- Added LLM key fallback chain (`LLM_API_KEY` -> `OPENAI_API_KEY` -> `CHATGPT_API_KEY`) and base URL fallback retry to OpenAI default when configured URL returns 404.
+- Added helper script `python-service/scripts/setup-pageindex.bat` for cloning the OSS repo and installing its dependencies.
+- Updated `python-service/requirements.txt` to remove invalid git-based `pageindex` pip line and document self-host setup flow.
+- Added `python-service/.vendor/` to `.gitignore` to avoid committing vendored runtime source.
+
+### Verified
+- `/rag/build-index` now returns `status: completed` with PageIndex tree structure output.
+- `/rag/query` succeeds after index build and returns answer + source citations from indexed content.
+
+## [2026-03-21] - OCR Runtime Fix and Binary Hygiene
+
+### Fixed
+- Resolved Python OCR runtime issue where knowledge extraction fell back to placeholder text due to missing OCR dependencies in the active interpreter.
+- Updated `python-service/start.bat` interpreter handling to correctly support `py -3.11` argument passing and preflight dependency checks.
+
+### Changed
+- Added recursive Python cache ignore rules (`**/__pycache__/`, `*.pyc`) in `.gitignore`.
+- Removed tracked `.pyc` artifacts from version control index under `python-service/__pycache__` and `python-service/utils/__pycache__`.
+
+## [2026-03-21] - Documentation Standardization and Storage Cleanup
+
+### Changed
+- Rewrote `README.md` to a production-grade structure with clear setup, workflow, configuration, troubleshooting, and contribution guidance.
+- Updated `docs/specs.md` to explicitly document runtime storage centralization under `python-service/`.
+- Updated `.gitignore` to cover runtime process artifacts (`**/.run/`, `**/*.pid`) and Python runtime cache/index folders.
+
+## [2026-03-21] - Storage Path Cleanup for Knowledge Pipeline
+
+### Fixed
+- Fixed backend storage path resolver so relative file paths now resolve to `python-service/uploads` instead of repository-root `uploads`.
+- Prevented ENOENT failures during knowledge processing caused by backend reading a non-existent root upload path.
+- Aligned report path resolver with the same storage strategy used by Python service.
+
+### Changed
+- Updated `python-service/start.bat` to explicitly set `UPLOAD_DIR`, `REPORT_DIR`, and `TEMPLATE_DIR` to folders inside `python-service/`.
+- Removed unused repository-root `uploads/` directory (storage now centralized in `python-service/uploads/`).
+- Hardened Python file storage resolver in `python-service/utils/file_handler.py` so relative or missing storage env vars always resolve under `python-service/`.
+- Removed unused repository-root `reports/` and `templates/` directories to avoid split storage locations.
+
 ## [2026-03-21] - Improve Dark Mode Contrast on Chat Page
 
 ### Fixed

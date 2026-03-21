@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { promises as fs } from "fs";
+import { existsSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { query, queryOne } from "../lib/db.js";
@@ -41,8 +42,17 @@ function resolveStoredPath(filePath: string): string {
     return filePath;
   }
 
-  const normalized = filePath.replace(/^\.\//, "");
-  return path.resolve(PROJECT_ROOT, normalized);
+  const normalized = filePath.replace(/^\.\//, "").replace(/\\/g, "/");
+
+  const candidates = [path.resolve(PROJECT_ROOT, "python-service", normalized)];
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return candidates[0];
 }
 
 async function loadSchemaColumns(

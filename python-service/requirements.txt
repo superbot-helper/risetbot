@@ -29,4 +29,6 @@ aiofiles==24.1.0
 litellm==1.82.0
 PyPDF2==3.0.1
 pyyaml==6.0.2
-pageindex @ git+https://github.com/VectifyAI/PageIndex.git
+# NOTE:
+# The open-source PageIndex repo is not pip-installable (no pyproject/setup.py).
+# Use scripts/setup-pageindex.bat to clone it into python-service/.vendor/PageIndex.

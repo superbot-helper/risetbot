@@ -6,6 +6,41 @@
 
 ## ✅ Checkpoint Terbaru
 
+- [2026-03-21] Konsolidasi runtime folder dan sinkronisasi dokumentasi:
+	- Menghapus duplikasi folder runtime di root (`logs`, `tree_indexes`) dan memusatkan artefak ke `python-service/logs` serta `python-service/tree_indexes`.
+	- Menambahkan guard pada eksekusi PageIndex agar working directory selalu `python-service`, sehingga artefak runtime tidak lagi muncul di root.
+	- Memperbarui `README.md` dan `docs/specs.md` agar struktur folder, kebijakan storage, serta perintah Python 3.11 (`py -3.11`) konsisten dengan implementasi.
+	- Menambahkan safeguard `.gitignore` untuk mencegah folder root `tree_indexes` terikut version control.
+
+- [2026-03-21] Validasi dan hardening PageIndex self-host (tree index + tree search):
+	- Integrasi `python-service/rag/pageindex_service.py` diperbaiki agar kompatibel dengan PageIndex OSS (validasi API `page_index_main` + `ConfigLoader`, bukan sekadar import modul `pageindex`).
+	- Menambahkan dukungan local repo source `python-service/.vendor/PageIndex` (opsional via env `PAGEINDEX_REPO_PATH`) agar self-host tetap jalan meskipun repo upstream belum pip-installable.
+	- Memperbaiki error event loop (`asyncio.run() cannot be called from a running event loop`) saat build index dengan menjalankan `page_index_main` di worker thread.
+	- Menormalkan format tree (`dict` dengan `structure`) agar endpoint `/rag/query` tidak gagal pada proses tree traversal.
+	- Menetapkan storage index tree ke path absolut `python-service/tree_indexes` agar konsisten lintas mode startup.
+	- Menambahkan fallback konfigurasi LLM key/base URL agar query lebih robust saat endpoint custom mengembalikan 404.
+	- Uji end-to-end berhasil:
+		- `/rag/build-index` mengembalikan `status: completed`.
+		- `/rag/query` mengembalikan jawaban beserta sumber sitasi.
+
+- [2026-03-21] Perbaikan OCR runtime dan pembersihan file biner:
+	- Root cause OCR ditemukan pada interpreter Python service aktif yang tidak memiliki dependency `fitz`/`paddleocr`.
+	- Dependency OCR dipasang pada interpreter `py -3.11` dan endpoint `/ocr/extract` tervalidasi kembali (status 200, teks hasil OCR terbaca).
+	- `python-service/start.bat` diperbaiki agar handling interpreter + argumen (`py -3.11`) valid dan preflight dependency berjalan benar.
+	- File biner cache Python (`.pyc`) ditambahkan ke `.gitignore` secara rekursif dan dibersihkan dari git index.
+
+- [2026-03-21] Standardisasi dokumentasi dan hygiene repository:
+	- `README.md` ditulis ulang dengan format standar industri (struktur jelas untuk setup, konfigurasi, API overview, troubleshooting, dan contribution).
+	- `docs/specs.md` diperbarui untuk menegaskan kebijakan storage runtime terpusat di `python-service/`.
+	- `.gitignore` dirapikan untuk mengabaikan artifact runtime (`**/.run/`, `**/*.pid`) dan cache/index Python service.
+
+- [2026-03-21] Rapikan storage upload agar tidak lagi memakai folder root:
+	- Resolver path backend (`agents` dan `reports`) sekarang membaca path relatif dari `python-service/`.
+	- Menetapkan `UPLOAD_DIR`, `REPORT_DIR`, `TEMPLATE_DIR` pada `python-service/start.bat` agar konsisten ke direktori service.
+	- Folder root `uploads/` yang tidak terpakai sudah dihapus.
+	- Resolver direktori Python service (`utils/file_handler.py`) diperketat agar fallback default selalu ke `python-service/uploads`, `python-service/reports`, dan `python-service/templates`.
+	- Folder root `reports/` dan `templates/` yang tidak dipakai sudah dihapus.
+
 - [2026-03-21] Perbaikan kontras dark mode di halaman Chat:
 	- Warna hardcoded abu-abu pada komponen Chat diganti ke token tema (`background/card/secondary/foreground`).
 	- Tampilan dark mode kini lebih gelap dan kontras lebih tinggi pada area percakapan, header, bubble pesan, dan input.

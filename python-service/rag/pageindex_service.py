@@ -13,6 +13,10 @@ Pipeline:
 import os
 import json
 import logging
+import asyncio
+import importlib
+import sys
+import threading
 from typing import Optional
 from pathlib import Path
 
@@ -20,8 +24,13 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
+# Optional local self-hosted PageIndex source checkout.
+SERVICE_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_PAGEINDEX_REPO_PATH = SERVICE_ROOT / '.vendor' / 'PageIndex'
+_PAGEINDEX_CWD_LOCK = threading.Lock()
+
 # Directory to store generated tree indexes
-TREE_INDEX_DIR = os.getenv('TREE_INDEX_DIR', './tree_indexes')
+TREE_INDEX_DIR = os.getenv('TREE_INDEX_DIR', str(SERVICE_ROOT / 'tree_indexes'))
 
 
 class PageIndexRAGService:
@@ -38,20 +47,95 @@ class PageIndexRAGService:
     llm_base_url: Optional[str] = None,
     llm_model: Optional[str] = None,
   ):
-    self.llm_api_key = llm_api_key or os.getenv('LLM_API_KEY', '')
+    self.llm_api_key = (
+      llm_api_key
+      or os.getenv('LLM_API_KEY', '')
+      or os.getenv('OPENAI_API_KEY', '')
+      or os.getenv('CHATGPT_API_KEY', '')
+    )
     self.llm_base_url = llm_base_url or os.getenv('LLM_BASE_URL', 'https://api.openai.com/v1')
     self.llm_model = llm_model or os.getenv('LLM_MODEL', 'gpt-4o-mini')
+    self._pageindex_source = 'unavailable'
     self._pageindex_available = self._check_pageindex()
     os.makedirs(TREE_INDEX_DIR, exist_ok=True)
 
-  def _check_pageindex(self) -> bool:
-    """Check if pageindex package is installed locally."""
+  def _is_pageindex_self_host_compatible(self) -> bool:
+    """Validate that imported pageindex exposes the open-source tree builder API."""
     try:
-      import pageindex  # noqa: F401
-      return True
-    except ImportError:
-      logger.warning('PageIndex package not installed. Using fallback context-window RAG.')
+      module = importlib.import_module('pageindex')
+      if not hasattr(module, 'page_index_main'):
+        return False
+      utils_module = importlib.import_module('pageindex.utils')
+      return hasattr(utils_module, 'ConfigLoader')
+    except Exception:
       return False
+
+  def _add_local_pageindex_repo_to_path(self) -> bool:
+    """Add local PageIndex repo checkout to sys.path when available."""
+    env_path = os.getenv('PAGEINDEX_REPO_PATH', '').strip()
+    candidates = []
+    if env_path:
+      candidates.append(Path(env_path))
+    candidates.append(DEFAULT_PAGEINDEX_REPO_PATH)
+
+    for candidate in candidates:
+      package_dir = candidate / 'pageindex'
+      if not package_dir.exists():
+        continue
+
+      candidate_str = str(candidate)
+      if candidate_str not in sys.path:
+        sys.path.insert(0, candidate_str)
+
+      # Force re-import so local repo can override incompatible pip package.
+      stale_modules = [name for name in list(sys.modules.keys()) if name == 'pageindex' or name.startswith('pageindex.')]
+      for module_name in stale_modules:
+        sys.modules.pop(module_name, None)
+
+      importlib.invalidate_caches()
+
+      if self._is_pageindex_self_host_compatible():
+        self._pageindex_source = f'local_repo:{candidate_str}'
+        return True
+
+    return False
+
+  def _check_pageindex(self) -> bool:
+    """Check if self-hosted PageIndex API is available locally."""
+    if self._is_pageindex_self_host_compatible():
+      self._pageindex_source = 'python_path'
+      return True
+
+    if self._add_local_pageindex_repo_to_path():
+      return True
+
+    logger.warning(
+      'Self-hosted PageIndex API unavailable. '
+      'Expected page_index_main + ConfigLoader. Using fallback context-window RAG.',
+    )
+    return False
+
+  def _get_pageindex_components(self):
+    """Import self-hosted PageIndex API components after compatibility checks."""
+    pageindex_module = importlib.import_module('pageindex')
+    utils_module = importlib.import_module('pageindex.utils')
+
+    page_index_main = getattr(pageindex_module, 'page_index_main', None)
+    config_loader_cls = getattr(utils_module, 'ConfigLoader', None)
+    if not page_index_main or not config_loader_cls:
+      raise ImportError('Incompatible pageindex module: self-hosted API not found')
+
+    return page_index_main, config_loader_cls
+
+  def _run_pageindex_in_service_root(self, page_index_main, pdf_path: str, opt):
+    """Run PageIndex with cwd pinned to python-service to avoid root-level runtime artifacts."""
+    with _PAGEINDEX_CWD_LOCK:
+      previous_cwd = os.getcwd()
+      try:
+        os.chdir(str(SERVICE_ROOT))
+        return page_index_main(pdf_path, opt)
+      finally:
+        os.chdir(previous_cwd)
 
   async def build_tree_index(self, pdf_path: str) -> dict:
     """
@@ -70,10 +154,9 @@ class PageIndexRAGService:
       return await self._build_fallback_index(pdf_path)
 
     try:
-      from pageindex import page_index_main
-      from pageindex.utils import ConfigLoader
+      page_index_main, config_loader_cls = self._get_pageindex_components()
 
-      opt = ConfigLoader().load({
+      opt = config_loader_cls().load({
         'model': self.llm_model,
         'if_add_node_id': 'yes',
         'if_add_node_summary': 'yes',
@@ -86,7 +169,8 @@ class PageIndexRAGService:
       if 'openai' not in self.llm_base_url:
         os.environ['OPENAI_API_BASE'] = self.llm_base_url
 
-      tree = page_index_main(pdf_path, opt)
+      # page_index_main internally uses asyncio.run(), so execute it in a worker thread.
+      tree = await asyncio.to_thread(self._run_pageindex_in_service_root, page_index_main, pdf_path, opt)
 
       # Save tree to disk for caching
       pdf_name = Path(pdf_path).stem
@@ -94,7 +178,12 @@ class PageIndexRAGService:
       with open(tree_path, 'w', encoding='utf-8') as f:
         json.dump(tree, f, indent=2, ensure_ascii=False)
 
-      logger.info('PageIndex tree built for %s: %s', pdf_name, tree_path)
+      logger.info(
+        'PageIndex tree built for %s: %s (source=%s)',
+        pdf_name,
+        tree_path,
+        self._pageindex_source,
+      )
 
       return {
         'doc_id': pdf_name,
@@ -219,14 +308,18 @@ class PageIndexRAGService:
 
       # If tree structure is embedded
       if 'tree' in doc and doc['tree']:
-        trees.append({'file_name': file_name, 'tree': doc['tree']})
+        normalized = self._normalize_tree(doc['tree'])
+        if normalized:
+          trees.append({'file_name': file_name, 'tree': normalized})
         continue
 
       # Try to load from disk via doc_id or file name stem
       doc_id = doc.get('doc_id', Path(file_name).stem if file_name else '')
       loaded_tree = self.load_tree_index(doc_id)
       if loaded_tree:
-        trees.append({'file_name': file_name, 'tree': loaded_tree})
+        normalized = self._normalize_tree(loaded_tree)
+        if normalized:
+          trees.append({'file_name': file_name, 'tree': normalized})
         continue
 
       # Build simple page-based nodes for tree search
@@ -250,6 +343,19 @@ class PageIndexRAGService:
           })
 
     return trees
+
+  def _normalize_tree(self, tree_data) -> list[dict]:
+    """Normalize PageIndex tree payload into a list of tree nodes."""
+    if isinstance(tree_data, list):
+      return tree_data
+
+    if isinstance(tree_data, dict):
+      structure = tree_data.get('structure')
+      if isinstance(structure, list):
+        return structure
+      return [tree_data]
+
+    return []
 
   async def _tree_search(
     self,
@@ -531,19 +637,38 @@ Jawab berdasarkan konteks di atas. Sertakan referensi sumber inline."""
     temperature: float = 0.3,
   ) -> str:
     """Call LLM chat completions endpoint."""
-    async with httpx.AsyncClient(timeout=90.0) as client:
-      response = await client.post(
-        f'{self.llm_base_url}/chat/completions',
-        headers={'Authorization': f'Bearer {self.llm_api_key}'},
-        json={
-          'model': self.llm_model,
-          'messages': messages,
-          'temperature': temperature,
-          'max_tokens': 4096,
-        },
-      )
+    if not self.llm_api_key:
+      raise RuntimeError('LLM_API_KEY/OPENAI_API_KEY is not configured')
 
-      if response.status_code == 200:
-        return response.json()['choices'][0]['message']['content']
-      else:
-        raise RuntimeError(f'LLM request failed ({response.status_code}): {response.text}')
+    payload = {
+      'model': self.llm_model,
+      'messages': messages,
+      'temperature': temperature,
+      'max_tokens': 4096,
+    }
+
+    async def _post_chat(base_url: str):
+      async with httpx.AsyncClient(timeout=90.0) as client:
+        return await client.post(
+          f'{base_url}/chat/completions',
+          headers={'Authorization': f'Bearer {self.llm_api_key}'},
+          json=payload,
+        )
+
+    primary_base = self.llm_base_url.rstrip('/')
+    response = await _post_chat(primary_base)
+
+    # Some deployments configure an endpoint that does not expose /chat/completions.
+    openai_default = 'https://api.openai.com/v1'
+    if response.status_code == 404 and primary_base != openai_default:
+      logger.warning(
+        'LLM base URL %s returned 404. Retrying with %s.',
+        primary_base,
+        openai_default,
+      )
+      response = await _post_chat(openai_default)
+
+    if response.status_code == 200:
+      return response.json()['choices'][0]['message']['content']
+
+    raise RuntimeError(f'LLM request failed ({response.status_code}): {response.text}')

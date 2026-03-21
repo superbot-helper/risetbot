@@ -175,7 +175,7 @@ export default function Knowledge({ projectId }: { projectId: string }) {
     setIsUploading(true);
 
     try {
-      await uploadKnowledgeFilesWithProgress({
+      const uploadResult = await uploadKnowledgeFilesWithProgress({
         projectId,
         files: readyFiles.map((item) => item.file),
         schemaId: selectedSchema || undefined,
@@ -207,12 +207,29 @@ export default function Knowledge({ projectId }: { projectId: string }) {
 
       toast({
         title: `${readyFiles.length} file berhasil diupload`,
-        description: "Setiap file siap diproses melalui pipeline AI.",
+        description: "Upload selesai. Pipeline AI dijalankan otomatis.",
       });
 
       queryClient.invalidateQueries({
         queryKey: [`/api/projects/${projectId}/knowledge`],
       });
+
+      const uploadedFiles = uploadResult.files ?? [];
+
+      for (const uploadedFile of uploadedFiles) {
+        await runPipeline(
+          projectId,
+          uploadedFile.id,
+          selectedSchema || uploadedFile.schemaId || undefined,
+        );
+      }
+
+      if (uploadedFiles.length > 0) {
+        toast({
+          title: "Pipeline selesai",
+          description: `${uploadedFiles.length} file sudah diproses. Silakan review hasil ekstraksi.`,
+        });
+      }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Upload knowledge gagal";
@@ -311,7 +328,7 @@ export default function Knowledge({ projectId }: { projectId: string }) {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <span className="text-sm font-medium text-gray-700">
-                      {stagedFiles.length} file siap / sedang diupload
+                      {stagedFiles.length} file antre / sedang diupload
                     </span>
                     <p className="text-xs text-gray-400 mt-0.5">
                       Progress ditampilkan per file sesuai Phase 7.
@@ -393,7 +410,7 @@ export default function Knowledge({ projectId }: { projectId: string }) {
                                     ? "Error"
                                     : item.status === "uploading"
                                       ? "Uploading..."
-                                      : "Ready"}
+                                      : "Ready (belum diupload)"}
                               </span>
                               <span className="text-gray-400">
                                 {item.progress}%

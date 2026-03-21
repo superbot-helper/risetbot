@@ -35,7 +35,7 @@ RisetBot has been migrated to a standalone **3-service architecture**:
 - **OCR**: PaddleOCR, PyMuPDF
 - **Data Analysis**: Pandas, NumPy
 - **Reporting**: python-docx-template, Jinja2
-- **RAG**: Reasoning-based document retrieval via LLM context-window
+- **RAG**: PageIndex self-hosted tree index + tree-search reasoning (with context-window fallback)
 
 ## Folder & File Project Structure
 
@@ -85,13 +85,21 @@ risetbot/
 │   │   ├── paddle_ocr_service.py # PaddleOCR wrapper
 │   │   └── pdf_parser.py     # PyMuPDF + OCR fallback
 │   ├── rag/                  # Reasoning-based RAG
-│   │   └── pageindex_service.py # Vectorless context-window RAG
+│   │   └── pageindex_service.py # PageIndex self-hosted tree index + tree search
 │   ├── report/               # DOCX template generation
 │   │   └── docx_generator.py # Jinja2 template rendering
+│   ├── scripts/
+│   │   └── setup-pageindex.bat # Clone + install self-hosted PageIndex OSS repo
 │   ├── utils/                # Helper functions
 │   │   ├── data_compiler.py  # CSV/XLSX export via Pandas
 │   │   └── file_handler.py   # File upload/validation/cleanup
 │   ├── main.py               # FastAPI entry point with all routes
+│   ├── .vendor/              # Local source checkout for PageIndex OSS (gitignored)
+│   ├── logs/                 # Runtime logs (PageIndex + Python service)
+│   ├── uploads/              # Runtime storage for knowledge PDFs
+│   ├── reports/              # Runtime storage for generated reports
+│   ├── templates/            # Runtime storage for uploaded DOCX templates
+│   ├── tree_indexes/         # Runtime storage for generated PageIndex tree files
 │   └── requirements.txt      # Python dependencies
 │
 ├── docs/                     # Documentation & Tasks
@@ -195,14 +203,22 @@ erDiagram
 - `npm run build` — Create production build
 
 **Python Service:**
-- `pip install -r requirements.txt` — Install dependencies
-- `uvicorn main:app --reload --port 9000` — Run FastAPI server
+- `py -3.11 -m pip install -r requirements.txt` — Install dependencies with Python 3.11
+- `py -3.11 -m uvicorn main:app --reload --port 9000` — Run FastAPI server with Python 3.11
+- `scripts/setup-pageindex.bat` — Bootstrap PageIndex OSS self-host source (`.vendor/PageIndex`) + deps
 
 **Windows Helper Scripts (.bat):**
 - `backend/start.bat`, `backend/stop.bat`, `backend/restart.bat` — Start/stop/restart backend di terminal terpisah.
 - `frontend/start.bat`, `frontend/stop.bat`, `frontend/restart.bat` — Start/stop/restart frontend di terminal terpisah.
 - `python-service/start.bat`, `python-service/stop.bat`, `python-service/restart.bat` — Start/stop/restart python service di terminal terpisah.
 - Setiap service menyimpan PID di folder `.run/` agar proses bisa dimonitor dan dihentikan secara terarah.
+
+## Storage Policy
+- Runtime file storage dipusatkan di `python-service/uploads`, `python-service/reports`, dan `python-service/templates`.
+- Runtime log dipusatkan di `python-service/logs`.
+- Runtime PageIndex tree cache disimpan di `python-service/tree_indexes` (path absolut berbasis service root, tidak bergantung current working directory).
+- Backend hanya menyimpan metadata path pada database dan membaca file dari lokasi storage Python service.
+- Root-level runtime folders (`uploads`, `reports`, `templates`, `logs`, `tree_indexes`) tidak digunakan.
 
 ## Code Style
 

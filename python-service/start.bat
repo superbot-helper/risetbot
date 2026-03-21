@@ -5,8 +5,13 @@ set "SERVICE_NAME=RisetBot Python Service"
 set "SERVICE_DIR=%~dp0"
 set "RUN_DIR=%SERVICE_DIR%.run"
 set "PID_FILE=%RUN_DIR%\python-service.pid"
+set "UPLOAD_DIR=%SERVICE_DIR%uploads"
+set "REPORT_DIR=%SERVICE_DIR%reports"
+set "TEMPLATE_DIR=%SERVICE_DIR%templates"
 set "VENV_PYTHON=%SERVICE_DIR%\.venv\Scripts\python.exe"
+set "ROOT_VENV_PYTHON=%SERVICE_DIR%..\.venv\Scripts\python.exe"
 set "PYTHON_EXE="
+set "PYTHON_ARGS="
 
 if not exist "%RUN_DIR%" mkdir "%RUN_DIR%"
 
@@ -16,10 +21,15 @@ if exist "%VENV_PYTHON%" (
   where py >nul 2>&1
   if not errorlevel 1 (
     set "PYTHON_EXE=py"
+    set "PYTHON_ARGS=-3.11"
   ) else (
     where python >nul 2>&1
     if not errorlevel 1 (
       set "PYTHON_EXE=python"
+    ) else (
+      if exist "%ROOT_VENV_PYTHON%" (
+        set "PYTHON_EXE=%ROOT_VENV_PYTHON%"
+      )
     )
   )
 )
@@ -27,6 +37,13 @@ if exist "%VENV_PYTHON%" (
 if not defined PYTHON_EXE (
   echo [%SERVICE_NAME%] Python tidak ditemukan.
   echo Install Python atau siapkan virtual environment di "%SERVICE_DIR%\.venv".
+  exit /b 1
+)
+
+"%PYTHON_EXE%" %PYTHON_ARGS% -c "import fitz, paddleocr" >nul 2>&1
+if errorlevel 1 (
+  echo [%SERVICE_NAME%] Dependency OCR belum lengkap pada interpreter aktif.
+  echo Jalankan: "%PYTHON_EXE%" %PYTHON_ARGS% -m pip install -r "%SERVICE_DIR%requirements.txt"
   exit /b 1
 )
 
@@ -44,7 +61,7 @@ if exist "%PID_FILE%" (
   )
 )
 
-for /f %%I in ('powershell -NoProfile -Command "$p = Start-Process -FilePath '%PYTHON_EXE%' -ArgumentList '-m','uvicorn','main:app','--reload','--port','9000' -WorkingDirectory '%SERVICE_DIR%' -PassThru; $p.Id"') do set "NEW_PID=%%I"
+for /f %%I in ('powershell -NoProfile -Command "$args = @(); if ('%PYTHON_ARGS%' -ne '') { $args += '%PYTHON_ARGS%' }; $args += @('-m','uvicorn','main:app','--reload','--port','9000'); $p = Start-Process -FilePath '%PYTHON_EXE%' -ArgumentList $args -WorkingDirectory '%SERVICE_DIR%' -PassThru; $p.Id"') do set "NEW_PID=%%I"
 
 if not defined NEW_PID (
   echo [%SERVICE_NAME%] gagal dijalankan.

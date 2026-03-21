@@ -49,4 +49,18 @@ Thumbs.db
 .local/
 
 .run
+**/.run/
+**/*.pid
 .env
+python-service/uploads/
+python-service/reports/
+python-service/templates/
+python-service/tree_indexes/
+python-service/.vendor/
+python-service/__pycache__/
+**/__pycache__/
+*.pyc
+
+/logs
+/tree_indexes
+/python-service/logs

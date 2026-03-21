@@ -9,6 +9,8 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+SERVICE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 # Allowed file extensions per purpose
 ALLOWED_EXTENSIONS = {
   'knowledge': {'.pdf'},
@@ -24,17 +26,28 @@ MAX_FILE_SIZES = {
 
 def get_upload_dir() -> str:
   """Get the configured upload directory."""
-  return os.getenv('UPLOAD_DIR', './uploads')
+  return _resolve_storage_dir('UPLOAD_DIR', 'uploads')
 
 
 def get_report_dir() -> str:
   """Get the configured reports directory."""
-  return os.getenv('REPORT_DIR', './reports')
+  return _resolve_storage_dir('REPORT_DIR', 'reports')
 
 
 def get_template_dir() -> str:
   """Get the configured templates directory."""
-  return os.getenv('TEMPLATE_DIR', './templates')
+  return _resolve_storage_dir('TEMPLATE_DIR', 'templates')
+
+
+def _resolve_storage_dir(env_var: str, default_subdir: str) -> str:
+  """Resolve storage dir to an absolute path rooted at python-service."""
+  configured = os.getenv(env_var, '').strip()
+  if configured:
+    if os.path.isabs(configured):
+      return configured
+    return os.path.normpath(os.path.join(SERVICE_ROOT, configured))
+
+  return os.path.join(SERVICE_ROOT, default_subdir)
 
 
 def validate_file(
