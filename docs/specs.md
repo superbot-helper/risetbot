@@ -198,6 +198,12 @@ erDiagram
 - `pip install -r requirements.txt` — Install dependencies
 - `uvicorn main:app --reload --port 9000` — Run FastAPI server
 
+**Windows Helper Scripts (.bat):**
+- `backend/start.bat`, `backend/stop.bat`, `backend/restart.bat` — Start/stop/restart backend di terminal terpisah.
+- `frontend/start.bat`, `frontend/stop.bat`, `frontend/restart.bat` — Start/stop/restart frontend di terminal terpisah.
+- `python-service/start.bat`, `python-service/stop.bat`, `python-service/restart.bat` — Start/stop/restart python service di terminal terpisah.
+- Setiap service menyimpan PID di folder `.run/` agar proses bisa dimonitor dan dihentikan secara terarah.
+
 ## Code Style
 
 ### Components

@@ -4,6 +4,15 @@
 > **Referensi:** [blueprint.md](./blueprint.md)
 > **Status Codebase:** Arsitektur sudah direstrukturisasi ke **3-service terpisah** (frontend + backend Node.js + python-service). Database PostgreSQL sudah aktif dengan schema lengkap.
 
+## ✅ Checkpoint Terbaru
+
+- [2026-03-21] Menambahkan script operasional Windows untuk tiap service:
+	- `backend/start.bat`, `backend/stop.bat`, `backend/restart.bat`
+	- `frontend/start.bat`, `frontend/stop.bat`, `frontend/restart.bat`
+	- `python-service/start.bat`, `python-service/stop.bat`, `python-service/restart.bat`
+- Tujuan: memudahkan start/stop/restart per service dengan terminal terpisah agar monitoring lebih jelas.
+- Mekanisme: PID disimpan di folder `.run/` pada masing-masing service untuk kontrol proses yang aman.
+
 ---
 
 ## 📊 Task List

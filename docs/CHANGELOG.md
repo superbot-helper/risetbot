@@ -1,5 +1,15 @@
 # Changelog
 
+## [2026-03-21] - Windows Service Runner Scripts
+
+### Added
+- Added `start.bat`, `stop.bat`, and `restart.bat` for each service:
+	- `backend/`
+	- `frontend/`
+	- `python-service/`
+- Each `start.bat` opens the service in a dedicated terminal window (`cmd /k`) so logs remain visible for monitoring.
+- Added PID-based process control (`.run/*.pid`) to make `stop.bat` and `restart.bat` reliable per service.
+
 ## [2026-03-21] - Phase 7, 9, 10, and 11 Alignment
 
 ### Diagnostics
