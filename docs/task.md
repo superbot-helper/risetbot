@@ -1,6 +1,6 @@
 # 📋 RisetBot — Task List Pengembangan
 
-> **Tanggal Audit:** 2026-03-20
+> **Tanggal Audit:** 2026-03-21
 > **Referensi:** [blueprint.md](./blueprint.md)
 > **Status Codebase:** Arsitektur sudah direstrukturisasi ke **3-service terpisah** (frontend + backend Node.js + python-service). Database PostgreSQL sudah aktif dengan schema lengkap.
 
@@ -96,11 +96,11 @@
 
 | No | Tugas | Status | Prioritas | Phase |
 |----|-------|--------|-----------|-------|
-| 57 | Implementasi progress bar per file saat upload PDF | ⚠️ Parsial | 🟡 High | Phase 7 |
-| 58 | Implementasi step indicator untuk OCR/Extraction ("Extracting... 75%") | ⚠️ Parsial | 🟡 High | Phase 7 |
-| 59 | Implementasi multi-step pipeline progress untuk Analysis (step 1/4, 2/4...) | ⚠️ Parsial | 🟡 High | Phase 7 |
-| 60 | Implementasi toast notification untuk sukses (✅ checkmark animation) dan error (❌) | ⚠️ Parsial | 🟢 Medium | Phase 7 |
-| 61 | Implementasi "AI sedang menganalisis PDF..." spinner untuk Auto-Generate Schema | ❌ Belum | 🟢 Medium | Phase 7 |
+| 57 | Implementasi progress bar per file saat upload PDF | ✅ Selesai | 🟡 High | Phase 7 |
+| 58 | Implementasi step indicator untuk OCR/Extraction ("Extracting... 75%") | ✅ Selesai | 🟡 High | Phase 7 |
+| 59 | Implementasi multi-step pipeline progress untuk Analysis (step 1/4, 2/4...) | ✅ Selesai | 🟡 High | Phase 7 |
+| 60 | Implementasi toast notification untuk sukses (✅ checkmark animation) dan error (❌) | ✅ Selesai | 🟢 Medium | Phase 7 |
+| 61 | Implementasi "AI sedang menganalisis PDF..." spinner untuk Auto-Generate Schema | ✅ Selesai | 🟢 Medium | Phase 7 |
 
 ### PHASE 8: Konfigurasi LLM & Gateway
 
@@ -114,27 +114,27 @@
 
 | No | Tugas | Status | Prioritas | Phase |
 |----|-------|--------|-----------|-------|
-| 65 | Implementasi file validation — hanya terima PDF (Knowledge) dan DOCX (Template) | ❌ Belum | 🟡 High | Phase 9 |
-| 66 | Implementasi input sanitization untuk chat input dan form | ❌ Belum | 🟡 High | Phase 9 |
-| 67 | Implementasi database backup script otomatis | ❌ Belum | 🟢 Medium | Phase 9 |
-| 68 | Implementasi guardrails anti-hallucination (cross-check angka dengan Pandas) | ❌ Belum | 🟢 Medium | Phase 9 |
+| 65 | Implementasi file validation — hanya terima PDF (Knowledge) dan DOCX (Template) | ✅ Selesai | 🟡 High | Phase 9 |
+| 66 | Implementasi input sanitization untuk chat input dan form | ✅ Selesai | 🟡 High | Phase 9 |
+| 67 | Implementasi database backup script otomatis | ✅ Selesai | 🟢 Medium | Phase 9 |
+| 68 | Implementasi guardrails anti-hallucination (cross-check angka dengan Pandas) | ✅ Selesai | 🟢 Medium | Phase 9 |
 | 69 | Implementasi data versioning (version number + riwayat perubahan) | ⚠️ Parsial | 🟢 Medium | Phase 9 |
 
 ### PHASE 10: Observability & Logging
 
 | No | Tugas | Status | Prioritas | Phase |
 |----|-------|--------|-----------|-------|
-| 70 | Integrasikan Langfuse untuk observability (tracking setiap langkah agent) | ❌ Belum | 🟡 High | Phase 10 |
-| 71 | Implementasi monitoring token usage per request | ❌ Belum | 🟢 Medium | Phase 10 |
-| 72 | Implementasi logging latency per agent untuk optimasi performa | ❌ Belum | 🟢 Medium | Phase 10 |
+| 70 | Integrasikan Langfuse untuk observability (tracking setiap langkah agent) | ✅ Selesai | 🟡 High | Phase 10 |
+| 71 | Implementasi monitoring token usage per request | ✅ Selesai | 🟢 Medium | Phase 10 |
+| 72 | Implementasi logging latency per agent untuk optimasi performa | ✅ Selesai | 🟢 Medium | Phase 10 |
 
 ### PHASE 11: Dokumentasi & Finalisasi
 
 | No | Tugas | Status | Prioritas | Phase |
 |----|-------|--------|-----------|-------|
-| 73 | Update `README.md` sesuai arsitektur baru (3-service Docker) | ❌ Belum | 🟡 High | Phase 11 |
-| 74 | Buat `docs/specs.md` untuk spesifikasi teknis | ❌ Belum | 🟡 High | Phase 11 |
-| 75 | Buat design-system file untuk konsistensi UI (Apple Minimalis theme) | ❌ Belum | 🟢 Medium | Phase 11 |
+| 73 | Update `README.md` sesuai arsitektur baru (3-service Docker) | ✅ Selesai | 🟡 High | Phase 11 |
+| 74 | Buat `docs/specs.md` untuk spesifikasi teknis | ✅ Selesai | 🟡 High | Phase 11 |
+| 75 | Buat design-system file untuk konsistensi UI (Apple Minimalis theme) | ✅ Selesai | 🟢 Medium | Phase 11 |
 
 ---
 
@@ -148,12 +148,12 @@
 | Phase 4: Backend Multi-Agent | 9 | 0 | 0 | 9 |
 | Phase 5: Frontend Halaman & Fitur | 20 | 0 | 7 | 13 |
 | Phase 6: UI/UX Navigasi & Layout | 6 | 0 | 0 | 6 |
-| Phase 7: Animasi & Feedback | 5 | 1 | 4 | 0 |
+| Phase 7: Animasi & Feedback | 5 | 0 | 0 | 5 |
 | Phase 8: Konfigurasi LLM | 3 | 0 | 0 | 3 |
-| Phase 9: Keamanan & Best Practice | 5 | 4 | 1 | 0 |
-| Phase 10: Observability | 3 | 3 | 0 | 0 |
-| Phase 11: Dokumentasi | 3 | 3 | 0 | 0 |
-| **TOTAL** | **73** | **11** | **11** | **51** |
+| Phase 9: Keamanan & Best Practice | 5 | 0 | 1 | 4 |
+| Phase 10: Observability | 3 | 0 | 0 | 3 |
+| Phase 11: Dokumentasi | 3 | 0 | 0 | 3 |
+| **TOTAL** | **73** | **3** | **4** | **66** |
 
 ---
 

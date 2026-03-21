@@ -1,0 +1,30 @@
+{
+  "include": ["python-service"],
+  "exclude": [
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/.mypy_cache",
+    "**/node_modules",
+    "**/uploads",
+    "**/reports",
+    "**/templates",
+  ],
+  "executionEnvironments": [
+    {
+      "root": "python-service",
+      "extraPaths": ["python-service"]
+    },
+  ],
+  "typeCheckingMode": "basic",
+  "useLibraryCodeForTypes": true,
+  "reportMissingImports": "none",
+  "reportMissingModuleSource": "none",
+  "reportUnknownVariableType": "none",
+  "reportUnknownArgumentType": "none",
+  "reportUnknownMemberType": "none",
+  "reportUnknownParameterType": "none",
+  "reportUnknownLambdaType": "none",
+  "reportUntypedFunctionDecorator": "none",
+  "reportUntypedBaseClass": "none",
+  "pythonVersion": "3.11"
+}

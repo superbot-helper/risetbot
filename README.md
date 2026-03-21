@@ -116,9 +116,9 @@ All agents utilize standard LLM models configured via `.env`.
 | **Backend API** | Node.js 24, Express 5, TypeScript 5.9 |
 | **Database** | PostgreSQL (Raw Queries via `pg` pool) |
 | **Security/Validation**| Zod |
-| **AI / LLM** | OpenAI SDK (`gpt-4o-mini` default), PraisonJS (Multi-Agent framework incoming) |
+| **AI / LLM** | OpenAI SDK (`gpt-4o-mini` default), PraisonAI/PraisonJS multi-agent orchestration |
 | **Python Service** | Python 3.11+, FastAPI, PaddleOCR, Pandas, python-docx-template |
-| **Logging** | Pino + pino-http |
+| **Logging** | Pino + pino-http + Langfuse-ready observability |
 
 ---
 
@@ -276,7 +276,11 @@ Base URL (Backend): `http://localhost:8000/api`
 
 ## Real-Time Streaming (SSE)
 
-RisetBot uses **Server-Sent Events** (SSE) closely mapped to the UI for live conversational updates in the ChatBot interface (`POST /api/projects/:id/chat`).
+RisetBot uses streaming responses closely mapped to the UI for:
+
+- live conversational updates in the ChatBot interface (`POST /api/projects/:id/chat`)
+- knowledge processing progress (`POST /api/agents/process/stream`)
+- step-based report generation status reflected from persisted pipeline metadata
 
 ```
 event: thinking
@@ -303,17 +307,30 @@ data: { "sources": [...] }
 | `chat_history` | Per-project chat messages with role, content, and source citations |
 | `agent_memory` | Long-term persisted memory blocks designed for future active AI context |
 | `activity_log` | Audit trail for all create, update, process, and confirm operations |
+| `agent_runs` | Per-agent execution history with status and latency |
+| `llm_request_log` | Token usage, latency, and request metadata for LLM calls |
+
+---
+
+## Security & Observability
+
+- Knowledge uploads only accept PDF files, and template uploads only accept DOCX files.
+- Backend route inputs are sanitized before storage and before being forwarded to LLM-backed workflows.
+- Report generation preserves `verifiedFacts` derived from Pandas analysis to reduce numeric hallucination risk in final narratives.
+- Langfuse tracing is supported when `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, and `LANGFUSE_BASE_URL` are configured.
+- Database backup automation is available through `backend/scripts/backup-db.mjs`.
 
 ---
 
 ## Roadmap
 
-- [ ] Complete connection between Backend and Python Service (Phase 3)
-- [ ] Migrate raw agent prompts into PraisonJS workflow architectures (Phase 4)
-- [ ] Advanced OCR handling featuring tabular detection algorithms
-- [ ] DOCX file uploads explicitly for template overwrites (Phase 5)
-- [ ] Role-based access controls
-- [ ] Native Webhooks per project pipeline state
+- [x] Complete connection between Backend and Python Service (Phase 3)
+- [x] Migrate agent workloads into multi-agent backend orchestration (Phase 4)
+- [x] Add progress-driven upload, extraction, and analysis feedback (Phase 7)
+- [x] Add validation, sanitization, backup, and observability foundations (Phase 9-10)
+- [ ] Expand advanced OCR handling for dense tabular survey layouts
+- [ ] Add role-based access controls
+- [ ] Add native webhooks per project pipeline state
 
 ---
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## [2026-03-21] - Phase 7, 9, 10, and 11 Alignment
+
+### Diagnostics
+- Cleaned `pyrightconfig.json` so `pyright` no longer reports unsupported configuration keys while checking `python-service`
+- Removed unused interpreter-specific config that caused unnecessary environment lookup noise during Python diagnostics
+
+### Documentation
+- Updated `docs/task.md` to reflect completed work in Phase 7, 9, 10, and 11
+- Updated `docs/specs.md` with security and observability coverage plus the new design-system document
+- Added `docs/design-system.md` as the UI consistency reference for tokens, motion, and feedback patterns
+- Updated `README.md` to reflect current multi-service status, streaming usage, security posture, and observability support
+
 ## [2026-03-20] — Phase 3 & 4: Python Service & Multi-Agent Implementation
 
 ### Phase 3: Python Service — AI/Data Processing

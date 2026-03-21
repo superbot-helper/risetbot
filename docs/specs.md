@@ -96,6 +96,7 @@ risetbot/
 │
 ├── docs/                     # Documentation & Tasks
 │   ├── blueprint.md          # Original architecture vision
+│   ├── design-system.md      # UI tokens, motion, and consistency rules
 │   ├── specs.md              # Software Specification
 │   └── task.md               # Development Task Tracking
 │
@@ -228,6 +229,18 @@ erDiagram
 - **Tailwind CSS + Framer Motion**: All styling follows Utility-first principles. Advanced animations rely on Framer Motion.
 - **Local SVGs / Icons**: Lucide-react used across the board.
 - Avoid third-party overarching UI libraries where unnecessary. The system maintains bespoke minimal inputs, buttons, toggles designed strictly for a minimalist Apple-like UI layout.
+
+## Security & Data Safety
+- Upload validation is enforced for **PDF** knowledge files and **DOCX** report templates.
+- Backend routes sanitize free-text inputs before persisting or passing them to agent workflows.
+- Sensitive values remain in environment variables and are never hardcoded in source files.
+- User-edited entities (`knowledge`, `templates`, `reports`) maintain a `version` field for lightweight version tracking.
+
+## Observability
+- Agent workflows can emit Langfuse traces when `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, and `LANGFUSE_BASE_URL` are configured.
+- LLM request metadata is persisted in `llm_request_log` for token usage and latency monitoring.
+- Agent execution metadata is persisted in `agent_runs` for per-agent timing and success/error tracking.
+- Knowledge and report pipelines expose progress updates to the frontend through streaming endpoints.
 
 ## Accessibility
 - All inputs have properly tied labels (`htmlFor`).

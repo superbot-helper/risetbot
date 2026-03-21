@@ -1,17 +1,19 @@
-import { useState } from 'react';
-import { ProjectLayout } from '@/components/layout/ProjectLayout';
+import { useState } from "react";
+import { ProjectLayout } from "@/components/layout/ProjectLayout";
 import {
   useListSchemas,
   useCreateSchema,
   useDeleteSchema,
   useAutoGenerateSchema,
-} from '@/services/api';
-import { Database, Plus, Wand2, Trash2, Edit, X } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { format } from 'date-fns';
-import { motion, AnimatePresence } from 'framer-motion';
+} from "@/services/api";
+import { Database, Plus, Wand2, Trash2, Edit, X } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Spinner } from "@/components/ui/spinner";
+import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
+import { sanitizeMultilineText, sanitizeUserText } from "@/lib/utils";
 
 export default function Schemas({ projectId }: { projectId: string }) {
   const { data: schemas, isLoading } = useListSchemas(projectId);
@@ -30,6 +32,7 @@ export default function Schemas({ projectId }: { projectId: string }) {
               Define what data the AI should extract from the surveys.
             </p>
           </div>
+
           <div className="flex gap-2">
             <button
               onClick={() => setIsAutoModalOpen(true)}
@@ -38,6 +41,7 @@ export default function Schemas({ projectId }: { projectId: string }) {
               <Wand2 className="w-4 h-4 text-purple-500" />
               Auto-Generate
             </button>
+
             <button
               onClick={() => setIsModalOpen(true)}
               className="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-full font-medium shadow-md shadow-primary/20 hover:bg-blue-600 transition-colors text-sm"
@@ -95,14 +99,7 @@ export default function Schemas({ projectId }: { projectId: string }) {
   );
 }
 
-
-function SchemaCard({
-  schema,
-  projectId,
-}: {
-  schema: any;
-  projectId: string;
-}) {
+function SchemaCard({ schema, projectId }: { schema: any; projectId: string }) {
   const { mutate: del, isPending } = useDeleteSchema();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -116,8 +113,16 @@ function SchemaCard({
           queryClient.invalidateQueries({
             queryKey: [`/api/projects/${projectId}/schemas`],
           });
-          toast({ title: 'Schema deleted' });
+          toast({ title: "Schema deleted" });
           setConfirmOpen(false);
+        },
+        onError: (error) => {
+          toast({
+            title: "Delete failed",
+            description:
+              error instanceof Error ? error.message : "Gagal menghapus schema",
+            variant: "destructive",
+          });
         },
       },
     );
@@ -134,6 +139,7 @@ function SchemaCard({
             </span>
           )}
         </div>
+
         <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
           {schema.description}
         </p>
@@ -162,9 +168,10 @@ function SchemaCard({
         <div className="flex items-center justify-between pt-3 border-t border-border/50">
           <span className="text-xs text-muted-foreground">
             {schema.updatedAt
-              ? format(new Date(schema.updatedAt), 'MMM d, yyyy')
-              : '—'}
+              ? format(new Date(schema.updatedAt), "MMM d, yyyy")
+              : "—"}
           </span>
+
           <div className="flex gap-1">
             <button className="p-1.5 text-muted-foreground hover:text-primary transition-colors">
               <Edit className="w-4 h-4" />
@@ -198,7 +205,6 @@ function SchemaCard({
   );
 }
 
-
 function CreateSchemaModal({
   projectId,
   onClose,
@@ -206,20 +212,30 @@ function CreateSchemaModal({
   projectId: string;
   onClose: () => void;
 }) {
-  const [name, setName] = useState('');
+  const [name, setName] = useState("");
   const { mutate: create, isPending } = useCreateSchema();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const handleCreate = () => {
+    const sanitizedName = sanitizeUserText(name, 255);
+
+    if (!sanitizedName) {
+      toast({
+        title: "Schema name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
     create(
       {
         projectId,
         data: {
-          name,
+          name: sanitizedName,
           columns: [
-            { name: 'Responden', type: 'text', aiGuidance: 'Nama responden' },
-            { name: 'Skor', type: 'number', aiGuidance: 'Skala 1-5' },
+            { name: "Responden", type: "text", aiGuidance: "Nama responden" },
+            { name: "Skor", type: "number", aiGuidance: "Skala 1-5" },
           ],
         },
       },
@@ -228,8 +244,16 @@ function CreateSchemaModal({
           queryClient.invalidateQueries({
             queryKey: [`/api/projects/${projectId}/schemas`],
           });
-          toast({ title: 'Schema created' });
+          toast({ title: "Schema created" });
           onClose();
+        },
+        onError: (error) => {
+          toast({
+            title: "Create schema failed",
+            description:
+              error instanceof Error ? error.message : "Gagal membuat schema",
+            variant: "destructive",
+          });
         },
       },
     );
@@ -252,12 +276,14 @@ function CreateSchemaModal({
             <X className="w-5 h-5" />
           </button>
         </div>
+
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Schema Name"
           className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-2 mb-4 outline-none focus:border-primary"
         />
+
         <div className="flex gap-2">
           <button
             onClick={onClose}
@@ -267,17 +293,16 @@ function CreateSchemaModal({
           </button>
           <button
             onClick={handleCreate}
-            disabled={!name || isPending}
+            disabled={isPending}
             className="flex-1 py-2 bg-primary text-white rounded-xl font-medium disabled:opacity-50"
           >
-            Save
+            {isPending ? "Saving..." : "Save"}
           </button>
         </div>
       </motion.div>
     </div>
   );
 }
-
 
 function AutoGenerateModal({
   projectId,
@@ -286,24 +311,40 @@ function AutoGenerateModal({
   projectId: string;
   onClose: () => void;
 }) {
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
   const { mutate: generate, isPending } = useAutoGenerateSchema();
-  const { mutate: create } = useCreateSchema();
+  const { mutate: create, isPending: isCreating } = useCreateSchema();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const handleGen = () => {
+    const sanitizedText = sanitizeMultilineText(text, 8000);
+
+    if (!sanitizedText) {
+      toast({
+        title: "Sample text is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
     generate(
-      { projectId, data: { sampleText: text } },
+      { projectId, data: { sampleText: sanitizedText } },
       {
         onSuccess: (data) => {
           create(
             {
               projectId,
               data: {
-                name: data.suggestedName,
-                description: data.suggestedDescription,
-                columns: data.columns,
+                name: sanitizeUserText(
+                  data.suggestedName || "Schema Baru",
+                  255,
+                ),
+                description: sanitizeMultilineText(
+                  data.suggestedDescription || "",
+                  2000,
+                ),
+                columns: Array.isArray(data.columns) ? data.columns : [],
               },
             },
             {
@@ -311,15 +352,41 @@ function AutoGenerateModal({
                 queryClient.invalidateQueries({
                   queryKey: [`/api/projects/${projectId}/schemas`],
                 });
-                toast({ title: 'AI Schema Generated Successfully!' });
+                toast({
+                  title: "AI Schema Generated Successfully!",
+                  description:
+                    "Schema baru telah dibuat dari hasil analisis AI.",
+                });
                 onClose();
+              },
+              onError: (error) => {
+                toast({
+                  title: "Create generated schema failed",
+                  description:
+                    error instanceof Error
+                      ? error.message
+                      : "Gagal menyimpan schema hasil AI",
+                  variant: "destructive",
+                });
               },
             },
           );
         },
+        onError: (error) => {
+          toast({
+            title: "Auto-generate failed",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Gagal menganalisis contoh survey",
+            variant: "destructive",
+          });
+        },
       },
     );
   };
+
+  const busy = isPending || isCreating;
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -353,26 +420,50 @@ function AutoGenerateModal({
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="e.g. 'Pertanyaan 1: Apakah Anda puas dengan layanan kami? Sangat Puas. Berikan saran: Tingkatkan kecepatan antrian...'"
-          className="w-full h-40 bg-secondary/30 border border-border rounded-xl p-4 text-sm outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 resize-none mb-6"
+          className="w-full h-40 bg-secondary/30 border border-border rounded-xl p-4 text-sm outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 resize-none mb-4"
         />
+
+        {busy && (
+          <div className="mb-5 rounded-2xl border border-primary/15 bg-primary/5 px-4 py-4">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5">
+                <Spinner className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-foreground">
+                  AI sedang menganalisis contoh survey...
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Meninjau struktur pertanyaan, pola jawaban, dan kandidat kolom
+                  schema agar hasil ekstraksi lebih presisi.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 bg-secondary text-secondary-foreground rounded-xl font-medium"
+            disabled={busy}
+            className="flex-1 py-2.5 bg-secondary text-secondary-foreground rounded-xl font-medium disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleGen}
-            disabled={!text || isPending}
+            disabled={!text.trim() || busy}
             className="flex-1 py-2.5 bg-gradient-to-r from-purple-500 to-primary text-white rounded-xl font-medium shadow-md flex justify-center items-center gap-2 disabled:opacity-50"
           >
-            {isPending ? (
-              'Analyzing...'
+            {busy ? (
+              <>
+                <Spinner className="w-4 h-4 text-white" />
+                Analyzing...
+              </>
             ) : (
               <>
-                <Wand2 className="w-4 h-4" /> Generate Schema
+                <Wand2 className="w-4 h-4" />
+                Generate Schema
               </>
             )}
           </button>

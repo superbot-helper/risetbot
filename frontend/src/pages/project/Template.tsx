@@ -1,12 +1,12 @@
-import { useState, useCallback } from 'react';
-import { ProjectLayout } from '@/components/layout/ProjectLayout';
+import { useCallback, useState } from "react";
+import { ProjectLayout } from "@/components/layout/ProjectLayout";
 import {
   useListTemplates,
   useUploadTemplate,
   useDeleteTemplate,
   useSetDefaultTemplate,
-} from '@/services/api';
-import { useDropzone } from 'react-dropzone';
+} from "@/services/api";
+import { useDropzone, type FileRejection } from "react-dropzone";
 import {
   Upload,
   FileSignature,
@@ -16,12 +16,14 @@ import {
   FileText,
   X,
   CheckCircle2,
-} from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { format } from 'date-fns';
-import { motion, AnimatePresence } from 'framer-motion';
+  ShieldCheck,
+} from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
+import { formatBytes, sanitizeFilename, sanitizeUserText } from "@/lib/utils";
 
 export default function Template({ projectId }: { projectId: string }) {
   const { data: templates, isLoading } = useListTemplates(projectId);
@@ -49,7 +51,22 @@ export default function Template({ projectId }: { projectId: string }) {
           </button>
         </div>
 
-        {/* Template Grid */}
+        <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4 flex items-start gap-3">
+          <div className="w-9 h-9 rounded-full bg-white text-primary flex items-center justify-center shrink-0 shadow-sm">
+            <ShieldCheck className="w-4 h-4" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">
+              Validasi file template aktif
+            </h2>
+            <p className="text-xs text-muted-foreground mt-1">
+              Sesuai Phase 9, frontend hanya menerima file{" "}
+              <strong>.docx</strong>. File selain DOCX akan ditolak sebelum
+              dikirim ke server.
+            </p>
+          </div>
+        </div>
+
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2].map((i) => (
@@ -63,14 +80,14 @@ export default function Template({ projectId }: { projectId: string }) {
           <EmptyState onUpload={() => setUploadModalOpen(true)} />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {templates?.map((tpl, idx) => (
+            {templates?.map((template, idx) => (
               <motion.div
-                key={tpl.id}
+                key={template.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
               >
-                <TemplateCard template={tpl} projectId={projectId} />
+                <TemplateCard template={template} projectId={projectId} />
               </motion.div>
             ))}
           </div>
@@ -89,7 +106,6 @@ export default function Template({ projectId }: { projectId: string }) {
   );
 }
 
-
 function EmptyState({ onUpload }: { onUpload: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-dashed border-gray-200">
@@ -98,10 +114,10 @@ function EmptyState({ onUpload }: { onUpload: () => void }) {
       </div>
       <h3 className="text-lg font-semibold mb-2">No templates yet</h3>
       <p className="text-muted-foreground text-sm max-w-sm text-center mb-6">
-        Upload a DOCX template with Jinja2 tags like{' '}
+        Upload a DOCX template with Jinja2 tags like{" "}
         <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">
-          {'{{ total_respondents }}'}
-        </code>{' '}
+          {"{{ total_respondents }}"}
+        </code>{" "}
         to generate reports.
       </p>
       <button
@@ -113,7 +129,6 @@ function EmptyState({ onUpload }: { onUpload: () => void }) {
     </div>
   );
 }
-
 
 function TemplateCard({
   template,
@@ -139,8 +154,18 @@ function TemplateCard({
       {
         onSuccess: () => {
           invalidate();
-          toast({ title: 'Template deleted' });
+          toast({ title: "Template deleted" });
           setConfirmOpen(false);
+        },
+        onError: (error) => {
+          toast({
+            title: "Delete failed",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Gagal menghapus template",
+            variant: "destructive",
+          });
         },
       },
     );
@@ -154,6 +179,16 @@ function TemplateCard({
           invalidate();
           toast({ title: `${template.name} set as default` });
         },
+        onError: (error) => {
+          toast({
+            title: "Set default failed",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Gagal mengubah template default",
+            variant: "destructive",
+          });
+        },
       },
     );
   };
@@ -163,24 +198,22 @@ function TemplateCard({
       <div
         className={`bg-white rounded-2xl border shadow-sm p-5 flex flex-col h-full hover:shadow-md transition-shadow relative overflow-hidden ${
           template.isDefault
-            ? 'border-primary/30 shadow-[0_4px_20px_rgba(0,122,255,0.08)]'
-            : 'border-border'
+            ? "border-primary/30 shadow-[0_4px_20px_rgba(0,122,255,0.08)]"
+            : "border-border"
         }`}
       >
-        {/* Default badge */}
         {template.isDefault && (
           <div className="absolute top-0 right-0 bg-primary text-white text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-bl-lg tracking-wider">
             Active
           </div>
         )}
 
-        {/* Icon + Name */}
         <div className="flex items-start gap-3 mb-3">
           <div
             className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
               template.isDefault
-                ? 'bg-primary/10 text-primary'
-                : 'bg-gray-100 text-gray-500'
+                ? "bg-primary/10 text-primary"
+                : "bg-gray-100 text-gray-500"
             }`}
           >
             <FileSignature className="w-5 h-5" />
@@ -189,27 +222,27 @@ function TemplateCard({
             <h3 className="font-semibold text-sm truncate">{template.name}</h3>
             <p className="text-xs text-gray-400 mt-0.5">
               {template.createdAt
-                ? format(new Date(template.createdAt), 'MMM d, yyyy')
-                : 'DOCX Template'}
+                ? format(new Date(template.createdAt), "MMM d, yyyy")
+                : "DOCX Template"}
             </p>
           </div>
         </div>
 
-        {/* File info */}
         <div className="flex-1 bg-gray-50 rounded-xl p-3 mb-4">
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <FileText className="w-3.5 h-3.5" />
-            <span className="truncate">{template.fileName || template.name}</span>
+            <span className="truncate">
+              {template.fileName || template.name}
+            </span>
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex items-center justify-between pt-3 border-t border-gray-100">
           {!template.isDefault ? (
             <button
               onClick={handleSetDefault}
               disabled={isSetting}
-              className="text-xs text-gray-500 hover:text-primary transition-colors flex items-center gap-1"
+              className="text-xs text-gray-500 hover:text-primary transition-colors flex items-center gap-1 disabled:opacity-50"
             >
               <Star className="w-3.5 h-3.5" />
               Set as Default
@@ -248,7 +281,6 @@ function TemplateCard({
   );
 }
 
-
 function UploadModal({
   projectId,
   onClose,
@@ -257,50 +289,118 @@ function UploadModal({
   onClose: () => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
-  const [name, setName] = useState('');
+  const [name, setName] = useState("");
   const [isDefault, setIsDefault] = useState(false);
   const { mutate: upload, isPending } = useUploadTemplate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const onDrop = useCallback((accepted: File[]) => {
-    if (accepted.length > 0) {
-      const f = accepted[0];
-      setFile(f);
-      if (!name) setName(f.name.replace(/\.docx?$/i, ''));
-    }
-  }, [name]);
+  const handleFileAccepted = useCallback(
+    (accepted: File[]) => {
+      if (accepted.length === 0) return;
+
+      const selectedFile = accepted[0];
+      const safeName = sanitizeFilename(selectedFile.name);
+      const safeDisplayName = sanitizeUserText(
+        safeName.replace(/\.docx$/i, ""),
+        255,
+      );
+
+      const normalizedFile = new File([selectedFile], safeName, {
+        type: selectedFile.type,
+        lastModified: selectedFile.lastModified,
+      });
+
+      setFile(normalizedFile);
+      if (!name.trim()) {
+        setName(safeDisplayName);
+      }
+    },
+    [name],
+  );
+
+  const handleRejected = useCallback(
+    (rejections: FileRejection[]) => {
+      for (const rejection of rejections) {
+        const firstError = rejection.errors[0];
+        toast({
+          title: `File ditolak: ${rejection.file.name}`,
+          description:
+            firstError?.message ||
+            "Hanya file DOCX hingga 10 MB yang diperbolehkan.",
+          variant: "destructive",
+        });
+      }
+    },
+    [toast],
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
+    onDrop: handleFileAccepted,
+    onDropRejected: handleRejected,
     accept: {
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      'application/msword': ['.doc'],
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        [".docx"],
     },
     maxFiles: 1,
+    maxSize: 10 * 1024 * 1024,
   });
 
   const handleUpload = () => {
-    if (!file || !name.trim()) return;
+    if (!file) return;
+
+    const sanitizedName = sanitizeUserText(name, 255);
+
+    if (!sanitizedName) {
+      toast({
+        title: "Template name is required",
+        description: "Masukkan nama template terlebih dahulu.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!file.name.toLowerCase().endsWith(".docx")) {
+      toast({
+        title: "Format file tidak valid",
+        description: "Frontend hanya menerima file .docx.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     upload(
-      { projectId, file, name: name.trim(), isDefault },
+      {
+        projectId,
+        file,
+        name: sanitizedName,
+        isDefault,
+      },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({
             queryKey: [`/api/projects/${projectId}/templates`],
           });
-          toast({ title: 'Template uploaded successfully' });
+          toast({
+            title: "Template uploaded successfully",
+            description: "Template DOCX siap digunakan untuk generate report.",
+          });
           onClose();
         },
         onError: (err) => {
           toast({
-            title: 'Upload failed',
+            title: "Upload failed",
             description: err.message,
-            variant: 'destructive',
+            variant: "destructive",
           });
         },
       },
     );
+  };
+
+  const removeFile = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setFile(null);
   };
 
   return (
@@ -312,7 +412,6 @@ function UploadModal({
         transition={{ duration: 0.2 }}
         className="bg-white rounded-3xl w-full max-w-md shadow-2xl"
       >
-        {/* Header */}
         <div className="px-6 pt-6 pb-4 flex justify-between items-center">
           <h2 className="text-xl font-bold">Upload Template</h2>
           <button
@@ -324,34 +423,46 @@ function UploadModal({
         </div>
 
         <div className="px-6 pb-6 space-y-4">
-          {/* Drop area */}
+          <div className="rounded-2xl border border-primary/10 bg-primary/5 px-4 py-3">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+              <div className="text-xs text-muted-foreground">
+                <div className="font-semibold text-foreground mb-1">
+                  Aturan upload template
+                </div>
+                <ul className="space-y-1 list-disc list-inside">
+                  <li>Hanya file .docx</li>
+                  <li>Maksimum ukuran 10 MB</li>
+                  <li>Nama template akan disanitasi sebelum dikirim</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
           <div
             {...getRootProps()}
             className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
               isDragActive
-                ? 'border-primary bg-blue-50/50'
+                ? "border-primary bg-blue-50/50"
                 : file
-                  ? 'border-green-300 bg-green-50/30'
-                  : 'border-gray-200 hover:border-gray-300'
+                  ? "border-green-300 bg-green-50/30"
+                  : "border-gray-200 hover:border-gray-300"
             }`}
           >
             <input {...getInputProps()} />
             {file ? (
               <div className="flex items-center gap-3 justify-center">
                 <FileSignature className="w-6 h-6 text-green-600" />
-                <div className="text-left">
-                  <p className="text-sm font-medium text-gray-900">
+                <div className="text-left min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
                     {file.name}
                   </p>
                   <p className="text-xs text-gray-400">
-                    {(file.size / 1024).toFixed(1)} KB
+                    {formatBytes(file.size)}
                   </p>
                 </div>
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setFile(null);
-                  }}
+                  onClick={removeFile}
                   className="p-1 text-gray-400 hover:text-red-500"
                 >
                   <X className="w-4 h-4" />
@@ -364,13 +475,12 @@ function UploadModal({
                   Drop DOCX file here
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Supports .docx format
+                  Supports only .docx format
                 </p>
               </>
             )}
           </div>
 
-          {/* Template name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Template Name
@@ -383,7 +493,6 @@ function UploadModal({
             />
           </div>
 
-          {/* Set as default */}
           <label className="flex items-center gap-3 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -396,7 +505,6 @@ function UploadModal({
             </span>
           </label>
 
-          {/* Actions */}
           <div className="flex gap-3 pt-2">
             <button
               onClick={onClose}

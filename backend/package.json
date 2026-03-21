@@ -8,12 +8,14 @@
     "start": "node dist/index.js",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "db:init": "psql -U postgres -d risetbot -f db/schema.sql"
+    "db:init": "psql -U postgres -d risetbot -f db/schema.sql",
+    "db:backup": "node ./scripts/backup-db.mjs"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^5.0.1",
+    "langfuse": "^3.38.6",
     "multer": "^1.4.5-lts.2",
     "openai": "^4.77.0",
     "pg": "^8.13.1",

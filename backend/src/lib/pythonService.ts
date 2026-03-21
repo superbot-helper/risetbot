@@ -1,51 +1,62 @@
-/**
- * Python Service Client — HTTP client for communicating with the
- * Python AI/Data Processing service.
- */
-import { logger } from './logger.js';
+// RisetBot backend — Python service client helpers
+// Communicates with the Python AI/Data Processing service.
 
-const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:9000';
-const REQUEST_TIMEOUT = 120_000; // 2 minutes
+const PYTHON_SERVICE_URL =
+  process.env.PYTHON_SERVICE_URL || "http://localhost:9000";
 
-/**
- * Generic request to the Python service.
- */
+const REQUEST_TIMEOUT = 120_000;
+
+async function parseJsonSafe<T>(response: Response): Promise<T> {
+  return response.json() as Promise<T>;
+}
+
+async function parseErrorMessage(response: Response): Promise<string> {
+  try {
+    const data = (await response.json()) as { detail?: string; error?: string };
+    return data.detail || data.error || response.statusText;
+  } catch {
+    return response.statusText;
+  }
+}
+
 async function pythonRequest<T>(
   endpoint: string,
   body: Record<string, unknown>,
-  options: { timeout?: number } = {}
+  options: { timeout?: number } = {},
 ): Promise<T> {
-  const url = `${PYTHON_SERVICE_URL}${endpoint}`;
-  const timeout = options.timeout || REQUEST_TIMEOUT;
-
+  const timeout = options.timeout ?? REQUEST_TIMEOUT;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await fetch(`${PYTHON_SERVICE_URL}${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(body),
       signal: controller.signal,
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Python service error (${response.status}): ${errorText}`);
+      const message = await parseErrorMessage(response);
+      throw new Error(
+        `Python service error (${response.status}) on ${endpoint}: ${message}`,
+      );
     }
 
-    return (await response.json()) as T;
+    return parseJsonSafe<T>(response);
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error(`Python service request to ${endpoint} timed out after ${timeout}ms`);
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(
+        `Python service request to ${endpoint} timed out after ${timeout}ms`,
+      );
     }
     throw error;
   } finally {
     clearTimeout(timeoutId);
   }
 }
-
-// ─── OCR ────────────────────────────────────────────────────
 
 export interface OCRResult {
   status: string;
@@ -59,20 +70,15 @@ export interface OCRResult {
   }>;
 }
 
-/**
- * Extract text from a base64-encoded PDF via Python OCR service.
- */
 export async function extractTextFromPDF(
   fileContent: string,
-  fileName: string
+  fileName: string,
 ): Promise<OCRResult> {
-  return pythonRequest<OCRResult>('/ocr/extract', {
+  return pythonRequest<OCRResult>("/ocr/extract", {
     file_content: fileContent,
     file_name: fileName,
   });
 }
-
-// ─── Analysis ───────────────────────────────────────────────
 
 export interface AnalysisResult {
   status: string;
@@ -85,9 +91,6 @@ export interface AnalysisResult {
   recommendations: string[];
 }
 
-/**
- * Analyze survey data via Python analysis service.
- */
 export async function analyzeData(
   data: Record<string, unknown>[],
   schemaColumns: Record<string, unknown>[],
@@ -95,9 +98,9 @@ export async function analyzeData(
     includeStatistics?: boolean;
     includeSentiment?: boolean;
     includeThemes?: boolean;
-  }
+  },
 ): Promise<AnalysisResult> {
-  return pythonRequest<AnalysisResult>('/analysis/analyze', {
+  return pythonRequest<AnalysisResult>("/analysis/analyze", {
     data,
     schema_columns: schemaColumns,
     include_statistics: options?.includeStatistics ?? true,
@@ -105,8 +108,6 @@ export async function analyzeData(
     include_themes: options?.includeThemes ?? true,
   });
 }
-
-// ─── Report ─────────────────────────────────────────────────
 
 export interface ReportResult {
   status: string;
@@ -116,17 +117,14 @@ export interface ReportResult {
   generated_at: string;
 }
 
-/**
- * Generate DOCX report via Python report service.
- */
 export async function generateDocxReport(
   templatePath: string,
   outputPath: string,
   analysisData: Record<string, unknown>,
   projectName: string,
-  reportName: string
+  reportName: string,
 ): Promise<ReportResult> {
-  return pythonRequest<ReportResult>('/report/generate', {
+  return pythonRequest<ReportResult>("/report/generate", {
     template_path: templatePath,
     output_path: outputPath,
     analysis_data: analysisData,
@@ -135,8 +133,6 @@ export async function generateDocxReport(
   });
 }
 
-// ─── RAG ────────────────────────────────────────────────────
-
 export interface RAGResult {
   status: string;
   answer: string;
@@ -144,22 +140,17 @@ export interface RAGResult {
   confidence: number;
 }
 
-/**
- * Query knowledge base via Python RAG service.
- */
 export async function queryRAG(
   question: string,
   documents: Array<{ file_name: string; text: string; pages?: unknown[] }>,
-  chatHistory?: Array<{ role: string; content: string }>
+  chatHistory?: Array<{ role: string; content: string }>,
 ): Promise<RAGResult> {
-  return pythonRequest<RAGResult>('/rag/query', {
+  return pythonRequest<RAGResult>("/rag/query", {
     question,
     documents,
     chat_history: chatHistory,
   });
 }
-
-// ─── Data Compilation ──────────────────────────────────────
 
 export interface CompileResult {
   status: string;
@@ -169,28 +160,86 @@ export interface CompileResult {
   columns?: string[];
 }
 
-/**
- * Compile data to CSV via Python service.
- */
 export async function compileToCSV(
-  data: Record<string, unknown>[]
+  data: Record<string, unknown>[],
 ): Promise<CompileResult> {
-  return pythonRequest<CompileResult>('/compile/export', {
+  return pythonRequest<CompileResult>("/compile/export", {
     data,
-    format: 'csv',
+    format: "csv",
   });
 }
 
-// ─── Health Check ──────────────────────────────────────────
+export interface FileValidationResult {
+  valid: boolean;
+  error?: string;
+}
 
-/**
- * Check if the Python service is available.
- */
+export async function validateUploadedFile(
+  filename: string,
+  fileSize: number,
+  purpose: "knowledge" | "template",
+): Promise<FileValidationResult> {
+  return pythonRequest<FileValidationResult>("/files/validate", {
+    filename,
+    file_size: fileSize,
+    purpose,
+  });
+}
+
+export interface StoredFileResult {
+  status: string;
+  file_path: string;
+  file_name: string;
+  stored_name: string;
+  file_size: number;
+}
+
+export async function uploadFileToStorage(
+  projectId: string,
+  fileBytes: Buffer | Uint8Array | ArrayBuffer,
+  fileName: string,
+  purpose: "knowledge" | "template",
+): Promise<StoredFileResult> {
+  const formData = new FormData();
+
+  const bytes =
+    fileBytes instanceof ArrayBuffer
+      ? new Uint8Array(fileBytes)
+      : fileBytes instanceof Uint8Array
+        ? fileBytes
+        : new Uint8Array(fileBytes);
+
+  const arrayBuffer = bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer;
+
+  const blob = new Blob([arrayBuffer]);
+  formData.append("file", blob, fileName);
+  formData.append("purpose", purpose);
+
+  const response = await fetch(
+    `${PYTHON_SERVICE_URL}/files/upload/${projectId}`,
+    {
+      method: "POST",
+      body: formData,
+    },
+  );
+
+  if (!response.ok) {
+    const message = await parseErrorMessage(response);
+    throw new Error(
+      `Python storage upload failed (${response.status}) for ${fileName}: ${message}`,
+    );
+  }
+
+  return parseJsonSafe<StoredFileResult>(response);
+}
+
 export async function checkPythonServiceHealth(): Promise<boolean> {
   try {
-    const url = `${PYTHON_SERVICE_URL}/health`;
-    const response = await fetch(url, {
-      method: 'GET',
+    const response = await fetch(`${PYTHON_SERVICE_URL}/health`, {
+      method: "GET",
       signal: AbortSignal.timeout(5000),
     });
     return response.ok;
